@@ -1,14 +1,28 @@
-.mapartController,
-.sectionsPreviewSettingsMaterials {
+.mapartController {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* Block selection sits on its own row above these two, and materials on its own row below,
+   so this row only has to lay out the preview and the settings column side by side.
+   flex-wrap plus flex-shrink: 0 on the children means settings drops beneath the preview
+   only when the two no longer fit across the available width, rather than being squeezed. */
+.sectionsPreviewSettings {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: flex-start;
 }
 
-.sectionsPreviewSettingsMaterials {
-  flex: 1;
+.sectionsPreviewSettings > * {
+  flex-shrink: 0;
+  max-width: 100%;
+}
+
+.sectionSettingsAndButtons {
+  display: block;
 }
 
 .section {

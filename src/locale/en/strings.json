@@ -23,6 +23,7 @@
   },
   "BLOCK-SELECTION": {
     "TITLE": "Block selection",
+    "EDIT-BLOCKS": "Edit block selection",
     "PRESETS": {
       "TITLE": "Presets",
       "DELETE": "Delete",

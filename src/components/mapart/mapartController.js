@@ -891,7 +891,7 @@ class MapartController extends Component {
           handleAddCustomBlock={this.handleAddCustomBlock}
           handleDeleteCustomBlock={this.handleDeleteCustomBlock}
         />
-        <div className="sectionsPreviewSettingsMaterials">
+        <div className="sectionsPreviewSettings">
           <MapPreview
             getLocaleString={getLocaleString}
             coloursJSON={coloursJSON}
@@ -931,7 +931,7 @@ class MapartController extends Component {
             onGetMapMaterials={this.handleSetMapMaterials}
             onMapPreviewWorker_begin={this.onMapPreviewWorker_begin}
           />
-          <div style={{ display: "block" }}>
+          <div className="sectionSettingsAndButtons">
             <MapSettings
               getLocaleString={getLocaleString}
               coloursJSON={coloursJSON}
@@ -1046,17 +1046,17 @@ class MapartController extends Component {
               onGetViewOnlineNBT={this.onGetViewOnlineNBT}
             />
           </div>
-          {optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId ? (
-            <Materials
-              getLocaleString={getLocaleString}
-              coloursJSON={coloursJSON}
-              optionValue_version={optionValue_version}
-              optionValue_supportBlock={optionValue_supportBlock}
-              currentMaterialsData={currentMaterialsData}
-              onChangeColourSetBlock={this.handleChangeColourSetBlock}
-            />
-          ) : null}
         </div>
+        {optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId ? (
+          <Materials
+            getLocaleString={getLocaleString}
+            coloursJSON={coloursJSON}
+            optionValue_version={optionValue_version}
+            optionValue_supportBlock={optionValue_supportBlock}
+            currentMaterialsData={currentMaterialsData}
+            onChangeColourSetBlock={this.handleChangeColourSetBlock}
+          />
+        ) : null}
         {viewOnline_NBT !== null &&
           (viewOnline_3D ? (
             <ViewOnline3D

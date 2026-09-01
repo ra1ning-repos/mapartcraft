@@ -337,14 +337,19 @@ class BlockSelection extends Component {
     return (
       <div className="section blockSelectionDiv">
         {presetsManagement}
-        {blockSelection}
-        <BlockSelectionAddCustom
-          getLocaleString={getLocaleString}
-          coloursJSON={coloursJSON}
-          onAddCustomBlock={handleAddCustomBlock}
-          onDeleteCustomBlock={handleDeleteCustomBlock}
-          lastSelectedCustomBlock={lastSelectedCustomBlock}
-        />
+        <details>
+          <summary>{getLocaleString("BLOCK-SELECTION/EDIT-BLOCKS")}</summary>
+          <div className="blockSelectionExpanded">
+            {blockSelection}
+            <BlockSelectionAddCustom
+              getLocaleString={getLocaleString}
+              coloursJSON={coloursJSON}
+              onAddCustomBlock={handleAddCustomBlock}
+              onDeleteCustomBlock={handleDeleteCustomBlock}
+              lastSelectedCustomBlock={lastSelectedCustomBlock}
+            />
+          </div>
+        </details>
       </div>
     );
   }
