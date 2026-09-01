@@ -73,6 +73,14 @@ class MapSettings extends Component {
       onOptionChange_PreProcessingContrast,
       preProcessingValue_saturation,
       onOptionChange_PreProcessingSaturation,
+      preProcessingValue_blackPoint,
+      onOptionChange_PreProcessingBlackPoint,
+      preProcessingValue_whitePoint,
+      onOptionChange_PreProcessingWhitePoint,
+      preProcessingValue_gamma,
+      onOptionChange_PreProcessingGamma,
+      preProcessingValue_sharpness,
+      onOptionChange_PreProcessingSharpness,
       preProcessingValue_backgroundColourSelect,
       onOptionChange_PreProcessingBackgroundColourSelect,
       preProcessingValue_backgroundColour,
@@ -714,6 +722,142 @@ class MapSettings extends Component {
         </td>
       </tr>
     );
+    const setting_preprocessing_blackPoint = (
+      <tr>
+        <th>
+          <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/PREPROCESSING/BLACK-POINT-TT")}>
+            <b>
+              {getLocaleString("MAP-SETTINGS/PREPROCESSING/BLACK-POINT")}
+              {":"}
+            </b>
+          </Tooltip>{" "}
+        </th>
+        <td>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={preProcessingValue_blackPoint}
+            onChange={(e) => onOptionChange_PreProcessingBlackPoint(parseInt(e.target.value))}
+            disabled={!optionValue_preprocessingEnabled}
+          />
+        </td>
+        <td>
+          <BufferedNumberInput
+            min="0"
+            max="100"
+            step="1"
+            value={preProcessingValue_blackPoint}
+            validators={[(t) => !isNaN(t), (t) => t >= 0, (t) => t <= 100]}
+            onValidInput={onOptionChange_PreProcessingBlackPoint}
+            disabled={!optionValue_preprocessingEnabled}
+            style={{ width: "3em" }}
+          />
+        </td>
+      </tr>
+    );
+    const setting_preprocessing_whitePoint = (
+      <tr>
+        <th>
+          <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/PREPROCESSING/WHITE-POINT-TT")}>
+            <b>
+              {getLocaleString("MAP-SETTINGS/PREPROCESSING/WHITE-POINT")}
+              {":"}
+            </b>
+          </Tooltip>{" "}
+        </th>
+        <td>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={preProcessingValue_whitePoint}
+            onChange={(e) => onOptionChange_PreProcessingWhitePoint(parseInt(e.target.value))}
+            disabled={!optionValue_preprocessingEnabled}
+          />
+        </td>
+        <td>
+          <BufferedNumberInput
+            min="0"
+            max="100"
+            step="1"
+            value={preProcessingValue_whitePoint}
+            validators={[(t) => !isNaN(t), (t) => t >= 0, (t) => t <= 100]}
+            onValidInput={onOptionChange_PreProcessingWhitePoint}
+            disabled={!optionValue_preprocessingEnabled}
+            style={{ width: "3em" }}
+          />
+        </td>
+      </tr>
+    );
+    const setting_preprocessing_gamma = (
+      <tr>
+        <th>
+          <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/PREPROCESSING/GAMMA-TT")}>
+            <b>
+              {getLocaleString("MAP-SETTINGS/PREPROCESSING/GAMMA")}
+              {":"}
+            </b>
+          </Tooltip>{" "}
+        </th>
+        <td>
+          <input
+            type="range"
+            min="10"
+            max="300"
+            value={preProcessingValue_gamma}
+            onChange={(e) => onOptionChange_PreProcessingGamma(parseInt(e.target.value))}
+            disabled={!optionValue_preprocessingEnabled}
+          />
+        </td>
+        <td>
+          <BufferedNumberInput
+            min="10"
+            max="300"
+            step="1"
+            value={preProcessingValue_gamma}
+            validators={[(t) => !isNaN(t), (t) => t >= 10, (t) => t <= 300]}
+            onValidInput={onOptionChange_PreProcessingGamma}
+            disabled={!optionValue_preprocessingEnabled}
+            style={{ width: "3em" }}
+          />
+        </td>
+      </tr>
+    );
+    const setting_preprocessing_sharpness = (
+      <tr>
+        <th>
+          <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/PREPROCESSING/SHARPNESS-TT")}>
+            <b>
+              {getLocaleString("MAP-SETTINGS/PREPROCESSING/SHARPNESS")}
+              {":"}
+            </b>
+          </Tooltip>{" "}
+        </th>
+        <td>
+          <input
+            type="range"
+            min="0"
+            max="200"
+            value={preProcessingValue_sharpness}
+            onChange={(e) => onOptionChange_PreProcessingSharpness(parseInt(e.target.value))}
+            disabled={!optionValue_preprocessingEnabled}
+          />
+        </td>
+        <td>
+          <BufferedNumberInput
+            min="0"
+            max="200"
+            step="1"
+            value={preProcessingValue_sharpness}
+            validators={[(t) => !isNaN(t), (t) => t >= 0, (t) => t <= 200]}
+            onValidInput={onOptionChange_PreProcessingSharpness}
+            disabled={!optionValue_preprocessingEnabled}
+            style={{ width: "3em" }}
+          />
+        </td>
+      </tr>
+    );
     const setting_preprocessing_background = (
       <tr>
         <th>
@@ -768,6 +912,10 @@ class MapSettings extends Component {
                 {setting_preprocessing_brightness}
                 {setting_preprocessing_contrast}
                 {setting_preprocessing_saturation}
+                {setting_preprocessing_blackPoint}
+                {setting_preprocessing_whitePoint}
+                {setting_preprocessing_gamma}
+                {setting_preprocessing_sharpness}
                 {setting_preprocessing_background}
                 {setting_preprocessing_backgroundColour}
               </tbody>

@@ -54,6 +54,10 @@ class MapartController extends Component {
     preProcessingValue_brightness: 100,
     preProcessingValue_contrast: 100,
     preProcessingValue_saturation: 100,
+    preProcessingValue_blackPoint: 0,
+    preProcessingValue_whitePoint: 100,
+    preProcessingValue_gamma: 100,
+    preProcessingValue_sharpness: 0,
     preProcessingValue_backgroundColourSelect: BackgroundColourModes.OFF.uniqueId,
     preProcessingValue_backgroundColour: "#151515",
     optionValue_extras_moreStaircasingOptions: false,
@@ -399,6 +403,30 @@ class MapartController extends Component {
   onOptionChange_PreProcessingSaturation = (value) => {
     this.setState({
       preProcessingValue_saturation: value,
+    });
+  };
+
+  onOptionChange_PreProcessingBlackPoint = (value) => {
+    this.setState({
+      preProcessingValue_blackPoint: value,
+    });
+  };
+
+  onOptionChange_PreProcessingWhitePoint = (value) => {
+    this.setState({
+      preProcessingValue_whitePoint: value,
+    });
+  };
+
+  onOptionChange_PreProcessingGamma = (value) => {
+    this.setState({
+      preProcessingValue_gamma: value,
+    });
+  };
+
+  onOptionChange_PreProcessingSharpness = (value) => {
+    this.setState({
+      preProcessingValue_sharpness: value,
     });
   };
 
@@ -807,6 +835,10 @@ class MapartController extends Component {
       preProcessingValue_brightness,
       preProcessingValue_contrast,
       preProcessingValue_saturation,
+      preProcessingValue_blackPoint,
+      preProcessingValue_whitePoint,
+      preProcessingValue_gamma,
+      preProcessingValue_sharpness,
       preProcessingValue_backgroundColourSelect,
       preProcessingValue_backgroundColour,
       optionValue_extras_moreStaircasingOptions,
@@ -871,6 +903,10 @@ class MapartController extends Component {
             preProcessingValue_brightness={preProcessingValue_brightness}
             preProcessingValue_contrast={preProcessingValue_contrast}
             preProcessingValue_saturation={preProcessingValue_saturation}
+            preProcessingValue_blackPoint={preProcessingValue_blackPoint}
+            preProcessingValue_whitePoint={preProcessingValue_whitePoint}
+            preProcessingValue_gamma={preProcessingValue_gamma}
+            preProcessingValue_sharpness={preProcessingValue_sharpness}
             preProcessingValue_backgroundColourSelect={preProcessingValue_backgroundColourSelect}
             preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
             uploadedImage={uploadedImage}
@@ -934,6 +970,14 @@ class MapartController extends Component {
               onOptionChange_PreProcessingContrast={this.onOptionChange_PreProcessingContrast}
               preProcessingValue_saturation={preProcessingValue_saturation}
               onOptionChange_PreProcessingSaturation={this.onOptionChange_PreProcessingSaturation}
+              preProcessingValue_blackPoint={preProcessingValue_blackPoint}
+              onOptionChange_PreProcessingBlackPoint={this.onOptionChange_PreProcessingBlackPoint}
+              preProcessingValue_whitePoint={preProcessingValue_whitePoint}
+              onOptionChange_PreProcessingWhitePoint={this.onOptionChange_PreProcessingWhitePoint}
+              preProcessingValue_gamma={preProcessingValue_gamma}
+              onOptionChange_PreProcessingGamma={this.onOptionChange_PreProcessingGamma}
+              preProcessingValue_sharpness={preProcessingValue_sharpness}
+              onOptionChange_PreProcessingSharpness={this.onOptionChange_PreProcessingSharpness}
               preProcessingValue_backgroundColourSelect={preProcessingValue_backgroundColourSelect}
               onOptionChange_PreProcessingBackgroundColourSelect={this.onOptionChange_PreProcessingBackgroundColourSelect}
               preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
@@ -970,6 +1014,10 @@ class MapartController extends Component {
               preProcessingValue_brightness={preProcessingValue_brightness}
               preProcessingValue_contrast={preProcessingValue_contrast}
               preProcessingValue_saturation={preProcessingValue_saturation}
+              preProcessingValue_blackPoint={preProcessingValue_blackPoint}
+              preProcessingValue_whitePoint={preProcessingValue_whitePoint}
+              preProcessingValue_gamma={preProcessingValue_gamma}
+              preProcessingValue_sharpness={preProcessingValue_sharpness}
               preProcessingValue_backgroundColourSelect={preProcessingValue_backgroundColourSelect}
               preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
               uploadedImage={uploadedImage}

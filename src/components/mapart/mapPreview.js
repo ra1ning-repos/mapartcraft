@@ -48,6 +48,10 @@ class MapPreview extends Component {
       prevProps.preProcessingValue_brightness === newProps.preProcessingValue_brightness,
       prevProps.preProcessingValue_contrast === newProps.preProcessingValue_contrast,
       prevProps.preProcessingValue_saturation === newProps.preProcessingValue_saturation,
+      prevProps.preProcessingValue_blackPoint === newProps.preProcessingValue_blackPoint,
+      prevProps.preProcessingValue_whitePoint === newProps.preProcessingValue_whitePoint,
+      prevProps.preProcessingValue_gamma === newProps.preProcessingValue_gamma,
+      prevProps.preProcessingValue_sharpness === newProps.preProcessingValue_sharpness,
       prevProps.preProcessingValue_backgroundColourSelect === newProps.preProcessingValue_backgroundColourSelect,
       prevProps.preProcessingValue_backgroundColour === newProps.preProcessingValue_backgroundColour,
       prevProps.uploadedImage === newProps.uploadedImage,
@@ -88,6 +92,10 @@ class MapPreview extends Component {
       prevProps.preProcessingValue_brightness === newProps.preProcessingValue_brightness,
       prevProps.preProcessingValue_contrast === newProps.preProcessingValue_contrast,
       prevProps.preProcessingValue_saturation === newProps.preProcessingValue_saturation,
+      prevProps.preProcessingValue_blackPoint === newProps.preProcessingValue_blackPoint,
+      prevProps.preProcessingValue_whitePoint === newProps.preProcessingValue_whitePoint,
+      prevProps.preProcessingValue_gamma === newProps.preProcessingValue_gamma,
+      prevProps.preProcessingValue_sharpness === newProps.preProcessingValue_sharpness,
       prevProps.preProcessingValue_backgroundColourSelect === newProps.preProcessingValue_backgroundColourSelect,
       prevProps.preProcessingValue_backgroundColour === newProps.preProcessingValue_backgroundColour,
       prevProps.uploadedImage === newProps.uploadedImage,
@@ -280,6 +288,85 @@ class MapPreview extends Component {
         throw new Error("Unknown optionValue_cropImage");
       }
     }
+
+    if (optionValue_preprocessingEnabled) {
+      this.applyPreProcessingPixelPass(ctx_source);
+    }
+  }
+
+  // Levels, gamma and sharpening cannot be expressed as canvas filter functions, so they run as a
+  // pixel pass over the source canvas once the image has been drawn (and after the brightness /
+  // contrast / saturate filter has already been baked in by drawImage).
+  applyPreProcessingPixelPass(ctx_source) {
+    const { preProcessingValue_blackPoint, preProcessingValue_whitePoint, preProcessingValue_gamma, preProcessingValue_sharpness } = this.props;
+    const levelsAreDefault =
+      preProcessingValue_blackPoint === 0 && preProcessingValue_whitePoint === 100 && preProcessingValue_gamma === 100;
+    if (levelsAreDefault && preProcessingValue_sharpness === 0) {
+      return; // nothing to do, so skip the getImageData / putImageData round trip entirely
+    }
+    const width = ctx_source.canvas.width;
+    const height = ctx_source.canvas.height;
+    const imageData = ctx_source.getImageData(0, 0, width, height);
+    const data = imageData.data;
+
+    if (!levelsAreDefault) {
+      // Black / white point and gamma collapse into a single 256-entry lookup table.
+      // Both points are percentages of the 0-255 input range; gamma 100 is linear,
+      // above 100 lifts midtones and below 100 crushes them.
+      const blackLevel = (preProcessingValue_blackPoint * 255) / 100;
+      const whiteLevel = Math.max((preProcessingValue_whitePoint * 255) / 100, blackLevel + 1); // guard a zero-width range
+      const gammaExponent = 100 / preProcessingValue_gamma;
+      const lookupTable = new Uint8ClampedArray(256);
+      for (let inputLevel = 0; inputLevel < 256; inputLevel++) {
+        const normalised = Math.min(Math.max((inputLevel - blackLevel) / (whiteLevel - blackLevel), 0), 1);
+        lookupTable[inputLevel] = Math.round(255 * Math.pow(normalised, gammaExponent));
+      }
+      for (let i = 0; i < data.length; i += 4) {
+        data[i + 0] = lookupTable[data[i + 0]];
+        data[i + 1] = lookupTable[data[i + 1]];
+        data[i + 2] = lookupTable[data[i + 2]];
+      }
+    }
+
+    if (preProcessingValue_sharpness !== 0) {
+      // Laplacian sharpen: out = centre * (1 + 4a) - (up + down + left + right) * a.
+      // Reads from a snapshot so freshly sharpened pixels do not feed back into their neighbours.
+      // Fully transparent pixels are left alone, and are treated as equal to the centre when
+      // sampled as a neighbour, so transparent regions do not bleed halos into the image.
+      const amount = preProcessingValue_sharpness / 100;
+      const source = new Uint8ClampedArray(data);
+      const neighbourOffsets = [
+        [-1, 0],
+        [1, 0],
+        [0, -1],
+        [0, 1],
+      ];
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const centreIndex = (y * width + x) * 4;
+          if (source[centreIndex + 3] === 0) {
+            continue;
+          }
+          for (let channel = 0; channel < 3; channel++) {
+            const centre = source[centreIndex + channel];
+            let neighbourSum = 0;
+            for (const [offsetX, offsetY] of neighbourOffsets) {
+              const neighbourX = x + offsetX;
+              const neighbourY = y + offsetY;
+              if (neighbourX < 0 || neighbourX >= width || neighbourY < 0 || neighbourY >= height) {
+                neighbourSum += centre; // clamp at the edges rather than inventing a gradient
+                continue;
+              }
+              const neighbourIndex = (neighbourY * width + neighbourX) * 4;
+              neighbourSum += source[neighbourIndex + 3] === 0 ? centre : source[neighbourIndex + channel];
+            }
+            data[centreIndex + channel] = centre * (1 + 4 * amount) - neighbourSum * amount;
+          }
+        }
+      }
+    }
+
+    ctx_source.putImageData(imageData, 0, 0);
   }
 
   updateCanvas_display() {
