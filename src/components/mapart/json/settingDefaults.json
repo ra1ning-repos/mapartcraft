@@ -1,0 +1,13 @@
+{
+  "optionValue_dithering_propagation_red": 100,
+  "optionValue_dithering_propagation_green": 100,
+  "optionValue_dithering_propagation_blue": 100,
+  "preProcessingValue_brightness": 100,
+  "preProcessingValue_contrast": 100,
+  "preProcessingValue_saturation": 100,
+  "preProcessingValue_blackPoint": 0,
+  "preProcessingValue_whitePoint": 100,
+  "preProcessingValue_gamma": 100,
+  "preProcessingValue_sharpness": 0,
+  "preProcessingValue_backgroundColour": "#151515"
+}

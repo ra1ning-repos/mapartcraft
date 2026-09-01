@@ -16,6 +16,7 @@ import CropModes from "./json/cropModes.json";
 import DefaultPresets from "./json/defaultPresets.json";
 import DitherMethods from "./json/ditherMethods.json";
 import MapModes from "./json/mapModes.json";
+import SettingDefaults from "./json/settingDefaults.json";
 import SupportedVersions from "./json/supportedVersions.json";
 import WhereSupportBlocksModes from "./json/whereSupportBlocksModes.json";
 
@@ -46,20 +47,20 @@ class MapartController extends Component {
     optionValue_mapdatFilenameIdStart: 0,
     optionValue_betterColour: ColourMethods.MapartCraftDefault.uniqueId,
     optionValue_dithering: DitherMethods.FloydSteinberg.uniqueId,
-    optionValue_dithering_propagation_red: 100,
-    optionValue_dithering_propagation_green: 100,
-    optionValue_dithering_propagation_blue: 100,
+    optionValue_dithering_propagation_red: SettingDefaults.optionValue_dithering_propagation_red,
+    optionValue_dithering_propagation_green: SettingDefaults.optionValue_dithering_propagation_green,
+    optionValue_dithering_propagation_blue: SettingDefaults.optionValue_dithering_propagation_blue,
     optionValue_dithering_boustrophedon: false,
     optionValue_preprocessingEnabled: false,
-    preProcessingValue_brightness: 100,
-    preProcessingValue_contrast: 100,
-    preProcessingValue_saturation: 100,
-    preProcessingValue_blackPoint: 0,
-    preProcessingValue_whitePoint: 100,
-    preProcessingValue_gamma: 100,
-    preProcessingValue_sharpness: 0,
+    preProcessingValue_brightness: SettingDefaults.preProcessingValue_brightness,
+    preProcessingValue_contrast: SettingDefaults.preProcessingValue_contrast,
+    preProcessingValue_saturation: SettingDefaults.preProcessingValue_saturation,
+    preProcessingValue_blackPoint: SettingDefaults.preProcessingValue_blackPoint,
+    preProcessingValue_whitePoint: SettingDefaults.preProcessingValue_whitePoint,
+    preProcessingValue_gamma: SettingDefaults.preProcessingValue_gamma,
+    preProcessingValue_sharpness: SettingDefaults.preProcessingValue_sharpness,
     preProcessingValue_backgroundColourSelect: BackgroundColourModes.OFF.uniqueId,
-    preProcessingValue_backgroundColour: "#151515",
+    preProcessingValue_backgroundColour: SettingDefaults.preProcessingValue_backgroundColour,
     optionValue_extras_moreStaircasingOptions: false,
     uploadedImage: null,
     uploadedImage_baseFilename: null,
@@ -427,6 +428,22 @@ class MapartController extends Component {
   onOptionChange_PreProcessingSharpness = (value) => {
     this.setState({
       preProcessingValue_sharpness: value,
+    });
+  };
+
+  onOptionChange_PreProcessingResetAll = () => {
+    // Deliberately leaves optionValue_preprocessingEnabled alone: this resets the values,
+    // it does not switch preprocessing off.
+    this.setState({
+      preProcessingValue_brightness: SettingDefaults.preProcessingValue_brightness,
+      preProcessingValue_contrast: SettingDefaults.preProcessingValue_contrast,
+      preProcessingValue_saturation: SettingDefaults.preProcessingValue_saturation,
+      preProcessingValue_blackPoint: SettingDefaults.preProcessingValue_blackPoint,
+      preProcessingValue_whitePoint: SettingDefaults.preProcessingValue_whitePoint,
+      preProcessingValue_gamma: SettingDefaults.preProcessingValue_gamma,
+      preProcessingValue_sharpness: SettingDefaults.preProcessingValue_sharpness,
+      preProcessingValue_backgroundColourSelect: BackgroundColourModes.OFF.uniqueId,
+      preProcessingValue_backgroundColour: SettingDefaults.preProcessingValue_backgroundColour,
     });
   };
 
@@ -982,6 +999,7 @@ class MapartController extends Component {
               onOptionChange_PreProcessingBackgroundColourSelect={this.onOptionChange_PreProcessingBackgroundColourSelect}
               preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
               onOptionChange_PreProcessingBackgroundColour={this.onOptionChange_PreProcessingBackgroundColour}
+              onOptionChange_PreProcessingResetAll={this.onOptionChange_PreProcessingResetAll}
               optionValue_extras_moreStaircasingOptions={optionValue_extras_moreStaircasingOptions}
               onOptionChange_extras_moreStaircasingOptions={this.onOptionChange_extras_moreStaircasingOptions}
             />

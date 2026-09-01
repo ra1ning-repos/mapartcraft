@@ -11,6 +11,7 @@ import CropModes from "./json/cropModes.json";
 import ColourMethods from "./json/colourMethods.json";
 import DitherMethods from "./json/ditherMethods.json";
 import MapModes from "./json/mapModes.json";
+import SettingDefaults from "./json/settingDefaults.json";
 import SupportedVersions from "./json/supportedVersions.json";
 import WhereSupportBlocksModes from "./json/whereSupportBlocksModes.json";
 
@@ -85,6 +86,7 @@ class MapSettings extends Component {
       onOptionChange_PreProcessingBackgroundColourSelect,
       preProcessingValue_backgroundColour,
       onOptionChange_PreProcessingBackgroundColour,
+      onOptionChange_PreProcessingResetAll,
       optionValue_extras_moreStaircasingOptions,
       onOptionChange_extras_moreStaircasingOptions,
     } = this.props;
@@ -523,6 +525,16 @@ class MapSettings extends Component {
             style={{ width: "3em" }}
           />
         </td>
+        <td>
+          <button
+            className="resetToDefaultButton"
+            title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
+            onClick={() => onOptionChange_dithering_propagation_red(SettingDefaults.optionValue_dithering_propagation_red)}
+            disabled={optionValue_dithering_propagation_red === SettingDefaults.optionValue_dithering_propagation_red}
+          >
+            {"↺"}
+          </button>
+        </td>
       </tr>
     );
     const setting_dithering_propagation_green = (
@@ -553,6 +565,16 @@ class MapSettings extends Component {
             style={{ width: "3em" }}
           />
         </td>
+        <td>
+          <button
+            className="resetToDefaultButton"
+            title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
+            onClick={() => onOptionChange_dithering_propagation_green(SettingDefaults.optionValue_dithering_propagation_green)}
+            disabled={optionValue_dithering_propagation_green === SettingDefaults.optionValue_dithering_propagation_green}
+          >
+            {"↺"}
+          </button>
+        </td>
       </tr>
     );
     const setting_dithering_propagation_blue = (
@@ -582,6 +604,16 @@ class MapSettings extends Component {
             onValidInput={onOptionChange_dithering_propagation_blue}
             style={{ width: "3em" }}
           />
+        </td>
+        <td>
+          <button
+            className="resetToDefaultButton"
+            title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
+            onClick={() => onOptionChange_dithering_propagation_blue(SettingDefaults.optionValue_dithering_propagation_blue)}
+            disabled={optionValue_dithering_propagation_blue === SettingDefaults.optionValue_dithering_propagation_blue}
+          >
+            {"↺"}
+          </button>
         </td>
       </tr>
     );
@@ -622,8 +654,11 @@ class MapSettings extends Component {
           </b>{" "}
           <input type="checkbox" checked={optionValue_preprocessingEnabled} onChange={onOptionChange_PreProcessingEnabled} />
         </th>
-        <td />
-        <td />
+        <td colSpan="3">
+          <button className="resetToDefaultButton" onClick={onOptionChange_PreProcessingResetAll} disabled={!optionValue_preprocessingEnabled}>
+            {getLocaleString("MAP-SETTINGS/PREPROCESSING/RESET-ALL")}
+          </button>
+        </td>
       </tr>
     );
     const setting_preprocessing_brightness = (
@@ -655,6 +690,16 @@ class MapSettings extends Component {
             disabled={!optionValue_preprocessingEnabled}
             style={{ width: "3em" }}
           />
+        </td>
+        <td>
+          <button
+            className="resetToDefaultButton"
+            title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
+            onClick={() => onOptionChange_PreProcessingBrightness(SettingDefaults.preProcessingValue_brightness)}
+            disabled={!optionValue_preprocessingEnabled || preProcessingValue_brightness === SettingDefaults.preProcessingValue_brightness}
+          >
+            {"↺"}
+          </button>
         </td>
       </tr>
     );
@@ -688,6 +733,16 @@ class MapSettings extends Component {
             style={{ width: "3em" }}
           />
         </td>
+        <td>
+          <button
+            className="resetToDefaultButton"
+            title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
+            onClick={() => onOptionChange_PreProcessingContrast(SettingDefaults.preProcessingValue_contrast)}
+            disabled={!optionValue_preprocessingEnabled || preProcessingValue_contrast === SettingDefaults.preProcessingValue_contrast}
+          >
+            {"↺"}
+          </button>
+        </td>
       </tr>
     );
     const setting_preprocessing_saturation = (
@@ -719,6 +774,16 @@ class MapSettings extends Component {
             disabled={!optionValue_preprocessingEnabled}
             style={{ width: "3em" }}
           />
+        </td>
+        <td>
+          <button
+            className="resetToDefaultButton"
+            title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
+            onClick={() => onOptionChange_PreProcessingSaturation(SettingDefaults.preProcessingValue_saturation)}
+            disabled={!optionValue_preprocessingEnabled || preProcessingValue_saturation === SettingDefaults.preProcessingValue_saturation}
+          >
+            {"↺"}
+          </button>
         </td>
       </tr>
     );
@@ -754,6 +819,16 @@ class MapSettings extends Component {
             style={{ width: "3em" }}
           />
         </td>
+        <td>
+          <button
+            className="resetToDefaultButton"
+            title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
+            onClick={() => onOptionChange_PreProcessingBlackPoint(SettingDefaults.preProcessingValue_blackPoint)}
+            disabled={!optionValue_preprocessingEnabled || preProcessingValue_blackPoint === SettingDefaults.preProcessingValue_blackPoint}
+          >
+            {"↺"}
+          </button>
+        </td>
       </tr>
     );
     const setting_preprocessing_whitePoint = (
@@ -787,6 +862,16 @@ class MapSettings extends Component {
             disabled={!optionValue_preprocessingEnabled}
             style={{ width: "3em" }}
           />
+        </td>
+        <td>
+          <button
+            className="resetToDefaultButton"
+            title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
+            onClick={() => onOptionChange_PreProcessingWhitePoint(SettingDefaults.preProcessingValue_whitePoint)}
+            disabled={!optionValue_preprocessingEnabled || preProcessingValue_whitePoint === SettingDefaults.preProcessingValue_whitePoint}
+          >
+            {"↺"}
+          </button>
         </td>
       </tr>
     );
@@ -822,6 +907,16 @@ class MapSettings extends Component {
             style={{ width: "3em" }}
           />
         </td>
+        <td>
+          <button
+            className="resetToDefaultButton"
+            title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
+            onClick={() => onOptionChange_PreProcessingGamma(SettingDefaults.preProcessingValue_gamma)}
+            disabled={!optionValue_preprocessingEnabled || preProcessingValue_gamma === SettingDefaults.preProcessingValue_gamma}
+          >
+            {"↺"}
+          </button>
+        </td>
       </tr>
     );
     const setting_preprocessing_sharpness = (
@@ -855,6 +950,16 @@ class MapSettings extends Component {
             disabled={!optionValue_preprocessingEnabled}
             style={{ width: "3em" }}
           />
+        </td>
+        <td>
+          <button
+            className="resetToDefaultButton"
+            title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
+            onClick={() => onOptionChange_PreProcessingSharpness(SettingDefaults.preProcessingValue_sharpness)}
+            disabled={!optionValue_preprocessingEnabled || preProcessingValue_sharpness === SettingDefaults.preProcessingValue_sharpness}
+          >
+            {"↺"}
+          </button>
         </td>
       </tr>
     );
