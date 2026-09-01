@@ -891,46 +891,7 @@ class MapartController extends Component {
           handleAddCustomBlock={this.handleAddCustomBlock}
           handleDeleteCustomBlock={this.handleDeleteCustomBlock}
         />
-        <div className="sectionsPreviewSettings">
-          <MapPreview
-            getLocaleString={getLocaleString}
-            coloursJSON={coloursJSON}
-            selectedBlocks={selectedBlocks}
-            disabledTones={disabledTones}
-            optionValue_version={optionValue_version}
-            optionValue_modeNBTOrMapdat={optionValue_modeNBTOrMapdat}
-            optionValue_mapSize_x={optionValue_mapSize_x}
-            optionValue_mapSize_y={optionValue_mapSize_y}
-            optionValue_cropImage={optionValue_cropImage}
-            optionValue_cropImage_zoom={optionValue_cropImage_zoom}
-            optionValue_cropImage_percent_x={optionValue_cropImage_percent_x}
-            optionValue_cropImage_percent_y={optionValue_cropImage_percent_y}
-            optionValue_showGridOverlay={optionValue_showGridOverlay}
-            optionValue_staircasing={optionValue_staircasing}
-            optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
-            optionValue_transparency={optionValue_transparency}
-            optionValue_transparencyTolerance={optionValue_transparencyTolerance}
-            optionValue_betterColour={optionValue_betterColour}
-            optionValue_dithering={optionValue_dithering}
-            optionValue_dithering_propagation_red={optionValue_dithering_propagation_red}
-            optionValue_dithering_propagation_green={optionValue_dithering_propagation_green}
-            optionValue_dithering_propagation_blue={optionValue_dithering_propagation_blue}
-            optionValue_dithering_boustrophedon={optionValue_dithering_boustrophedon}
-            optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
-            preProcessingValue_brightness={preProcessingValue_brightness}
-            preProcessingValue_contrast={preProcessingValue_contrast}
-            preProcessingValue_saturation={preProcessingValue_saturation}
-            preProcessingValue_blackPoint={preProcessingValue_blackPoint}
-            preProcessingValue_whitePoint={preProcessingValue_whitePoint}
-            preProcessingValue_gamma={preProcessingValue_gamma}
-            preProcessingValue_sharpness={preProcessingValue_sharpness}
-            preProcessingValue_backgroundColourSelect={preProcessingValue_backgroundColourSelect}
-            preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
-            uploadedImage={uploadedImage}
-            onFileDialogEvent={this.onFileDialogEvent}
-            onGetMapMaterials={this.handleSetMapMaterials}
-            onMapPreviewWorker_begin={this.onMapPreviewWorker_begin}
-          />
+        <div className="sectionsSettingsAndPreview">
           <div className="sectionSettingsAndButtons">
             <MapSettings
               getLocaleString={getLocaleString}
@@ -1046,6 +1007,45 @@ class MapartController extends Component {
               onGetViewOnlineNBT={this.onGetViewOnlineNBT}
             />
           </div>
+          <MapPreview
+            getLocaleString={getLocaleString}
+            coloursJSON={coloursJSON}
+            selectedBlocks={selectedBlocks}
+            disabledTones={disabledTones}
+            optionValue_version={optionValue_version}
+            optionValue_modeNBTOrMapdat={optionValue_modeNBTOrMapdat}
+            optionValue_mapSize_x={optionValue_mapSize_x}
+            optionValue_mapSize_y={optionValue_mapSize_y}
+            optionValue_cropImage={optionValue_cropImage}
+            optionValue_cropImage_zoom={optionValue_cropImage_zoom}
+            optionValue_cropImage_percent_x={optionValue_cropImage_percent_x}
+            optionValue_cropImage_percent_y={optionValue_cropImage_percent_y}
+            optionValue_showGridOverlay={optionValue_showGridOverlay}
+            optionValue_staircasing={optionValue_staircasing}
+            optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
+            optionValue_transparency={optionValue_transparency}
+            optionValue_transparencyTolerance={optionValue_transparencyTolerance}
+            optionValue_betterColour={optionValue_betterColour}
+            optionValue_dithering={optionValue_dithering}
+            optionValue_dithering_propagation_red={optionValue_dithering_propagation_red}
+            optionValue_dithering_propagation_green={optionValue_dithering_propagation_green}
+            optionValue_dithering_propagation_blue={optionValue_dithering_propagation_blue}
+            optionValue_dithering_boustrophedon={optionValue_dithering_boustrophedon}
+            optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
+            preProcessingValue_brightness={preProcessingValue_brightness}
+            preProcessingValue_contrast={preProcessingValue_contrast}
+            preProcessingValue_saturation={preProcessingValue_saturation}
+            preProcessingValue_blackPoint={preProcessingValue_blackPoint}
+            preProcessingValue_whitePoint={preProcessingValue_whitePoint}
+            preProcessingValue_gamma={preProcessingValue_gamma}
+            preProcessingValue_sharpness={preProcessingValue_sharpness}
+            preProcessingValue_backgroundColourSelect={preProcessingValue_backgroundColourSelect}
+            preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
+            uploadedImage={uploadedImage}
+            onFileDialogEvent={this.onFileDialogEvent}
+            onGetMapMaterials={this.handleSetMapMaterials}
+            onMapPreviewWorker_begin={this.onMapPreviewWorker_begin}
+          />
         </div>
         {optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId ? (
           <Materials

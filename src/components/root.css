@@ -1,8 +1,29 @@
+.siteHeader {
+    background-color: var(--headerBackground);
+    padding: 0.3em 0.6em 0.4em 0.6em;
+    margin-bottom: 0.5em;
+}
+
 .titleAndLanguages {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Baseline alignment keeps the h1 and the h3 sitting on the same line
+   while each keeps its own font size. */
+.siteTitle {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 0.5em;
+}
+
+.siteSubtitle {
+    margin: 0;
 }
 
 .fixedMessages {

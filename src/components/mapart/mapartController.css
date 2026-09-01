@@ -5,10 +5,11 @@
 }
 
 /* Block selection sits on its own row above these two, and materials on its own row below,
-   so this row only has to lay out the preview and the settings column side by side.
-   flex-wrap plus flex-shrink: 0 on the children means settings drops beneath the preview
-   only when the two no longer fit across the available width, rather than being squeezed. */
-.sectionsPreviewSettings {
+   so this row only has to lay out the settings column and the preview side by side.
+   Settings comes first so it stays hard left; flex-wrap plus flex-shrink: 0 on the children
+   means the preview drops beneath settings once the two no longer fit across the available
+   width, rather than either of them being squeezed. */
+.sectionsSettingsAndPreview {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
@@ -16,7 +17,7 @@
   align-items: flex-start;
 }
 
-.sectionsPreviewSettings > * {
+.sectionsSettingsAndPreview > * {
   flex-shrink: 0;
   max-width: 100%;
 }

@@ -1,5 +1,6 @@
 :root {
   --rebaneGreen: #7BAE7F;
+  --headerBackground: #404040;
 }
 
 @import url("https://fonts.googleapis.com/css?family=Open+Sans");

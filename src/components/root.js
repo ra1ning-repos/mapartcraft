@@ -61,11 +61,19 @@ class Root extends Component {
     const { displayingCorruptedPresetWarning, displayingEdgeWarning } = this.state;
     return (
       <React.Fragment>
-        <div className="titleAndLanguages">
-          <span><h1>MapartCraft</h1>{this.props.match.params.countryCode && this.props.match.params.countryCode !== "en" && <small>{this.getLocaleString("TRANSLATION/CREDITS")}</small>}</span>
-          <Languages />
+        <div className="siteHeader">
+          <div className="titleAndLanguages">
+            <div className="siteTitle">
+              <h1>MapartCraft</h1>
+              <h3 className="siteSubtitle">{"RA1NING's version"}</h3>
+              {this.props.match.params.countryCode && this.props.match.params.countryCode !== "en" && (
+                <small>{this.getLocaleString("TRANSLATION/CREDITS")}</small>
+              )}
+            </div>
+            <Languages />
+          </div>
+          <Header />
         </div>
-        <Header getLocaleString={this.getLocaleString} countryCode={this.props.match.params.countryCode} />
         <MapartController getLocaleString={this.getLocaleString} onCorruptedPreset={this.showCorruptedPresetWarning} />
         <div className="fixedMessages">
           {displayingEdgeWarning ? (

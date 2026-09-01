@@ -3,3 +3,7 @@
   cursor: pointer;
   text-decoration: underline;
 }
+
+.header p {
+  margin: 0;
+}
