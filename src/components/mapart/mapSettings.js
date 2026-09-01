@@ -91,22 +91,25 @@ class MapSettings extends Component {
       onOptionChange_extras_moreStaircasingOptions,
     } = this.props;
     const setting_mode = (
-      <React.Fragment>
-        <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/MODE-TT")}>
-          <b>
-            {getLocaleString("MAP-SETTINGS/MODE")}
-            {":"}
-          </b>
-        </Tooltip>{" "}
-        <select onChange={onOptionChange_modeNBTOrMapdat} value={optionValue_modeNBTOrMapdat}>
-          {Object.values(MapModes).map((mapMode) => (
-            <option key={mapMode.uniqueId} value={mapMode.uniqueId}>
-              {mapMode.name}
-            </option>
-          ))}
-        </select>
-        <br />
-      </React.Fragment>
+      <tr>
+        <th>
+          <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/MODE-TT")}>
+            <b>
+              {getLocaleString("MAP-SETTINGS/MODE")}
+              {":"}
+            </b>
+          </Tooltip>{" "}
+        </th>
+        <td>
+          <select onChange={onOptionChange_modeNBTOrMapdat} value={optionValue_modeNBTOrMapdat}>
+            {Object.values(MapModes).map((mapMode) => (
+              <option key={mapMode.uniqueId} value={mapMode.uniqueId}>
+                {mapMode.name}
+              </option>
+            ))}
+          </select>
+        </td>
+      </tr>
     );
     const setting_version = (
       <React.Fragment>
@@ -1049,7 +1052,10 @@ class MapSettings extends Component {
         <details>
           <summary>{getLocaleString("MAP-SETTINGS/EXTRAS/TITLE")}</summary>
           <table>
-            <tbody>{setting_extras_moreStaircasingOptions}</tbody>
+            <tbody>
+              {setting_mode}
+              {setting_extras_moreStaircasingOptions}
+            </tbody>
           </table>
         </details>
       </React.Fragment>
@@ -1057,7 +1063,6 @@ class MapSettings extends Component {
     const settingsDiv = (
       <div className="section settingsDiv">
         <h2>{getLocaleString("MAP-SETTINGS/TITLE")}</h2>
-        {setting_mode}
         {setting_version}
         {setting_mapSize}
         {settingGroup_cropping}

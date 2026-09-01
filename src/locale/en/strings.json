@@ -127,8 +127,8 @@
       "MAPDAT-FILENAME-USE-ID-TT": "Save mapdats as 'map_#.dat'",
       "MAPDAT-FILENAME-ID-RANGE": "Range"
     },
-    "BETTER-COLOUR": "Better color",
-    "BETTER-COLOUR-TT": "Gives you better color accuracy",
+    "BETTER-COLOUR": "Colorspace",
+    "BETTER-COLOUR-TT": "How the difference (distance) between colors is calculated",
     "RESET-TO-DEFAULT": "Reset to default",
     "DITHERING": {
       "TITLE": "Dithering",

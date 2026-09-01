@@ -45,7 +45,7 @@ class MapartController extends Component {
     optionValue_transparencyTolerance: 128,
     optionValue_mapdatFilenameUseId: true,
     optionValue_mapdatFilenameIdStart: 0,
-    optionValue_betterColour: ColourMethods.MapartCraftDefault.uniqueId,
+    optionValue_betterColour: ColourMethods.Cie76_Lab50.uniqueId,
     optionValue_dithering: DitherMethods.FloydSteinberg.uniqueId,
     optionValue_dithering_propagation_red: SettingDefaults.optionValue_dithering_propagation_red,
     optionValue_dithering_propagation_green: SettingDefaults.optionValue_dithering_propagation_green,
@@ -870,27 +870,6 @@ class MapartController extends Component {
     } = this.state;
     return (
       <div className="mapartController">
-        <BlockSelection
-          getLocaleString={getLocaleString}
-          coloursJSON={coloursJSON}
-          disabledTones={disabledTones}
-          onChangeColourSetBlock={this.handleChangeColourSetBlock}
-          onToggleColourTone={this.handleToggleColourTone}
-          optionValue_version={optionValue_version}
-          optionValue_modeNBTOrMapdat={optionValue_modeNBTOrMapdat}
-          optionValue_staircasing={optionValue_staircasing}
-          selectedBlocks={selectedBlocks}
-          presets={presets}
-          selectedPresetName={selectedPresetName}
-          canDeletePreset={this.canDeletePreset}
-          onPresetChange={this.handlePresetChange}
-          onDeletePreset={this.handleDeletePreset}
-          onSavePreset={this.handleSavePreset}
-          onSharePreset={this.handleSharePreset}
-          onGetPDNPaletteClicked={this.handleGetPDNPaletteClicked}
-          handleAddCustomBlock={this.handleAddCustomBlock}
-          handleDeleteCustomBlock={this.handleDeleteCustomBlock}
-        />
         <div className="sectionsSettingsAndPreview">
           <div className="sectionSettingsAndButtons">
             <MapSettings
@@ -1047,6 +1026,27 @@ class MapartController extends Component {
             onMapPreviewWorker_begin={this.onMapPreviewWorker_begin}
           />
         </div>
+        <BlockSelection
+          getLocaleString={getLocaleString}
+          coloursJSON={coloursJSON}
+          disabledTones={disabledTones}
+          onChangeColourSetBlock={this.handleChangeColourSetBlock}
+          onToggleColourTone={this.handleToggleColourTone}
+          optionValue_version={optionValue_version}
+          optionValue_modeNBTOrMapdat={optionValue_modeNBTOrMapdat}
+          optionValue_staircasing={optionValue_staircasing}
+          selectedBlocks={selectedBlocks}
+          presets={presets}
+          selectedPresetName={selectedPresetName}
+          canDeletePreset={this.canDeletePreset}
+          onPresetChange={this.handlePresetChange}
+          onDeletePreset={this.handleDeletePreset}
+          onSavePreset={this.handleSavePreset}
+          onSharePreset={this.handleSharePreset}
+          onGetPDNPaletteClicked={this.handleGetPDNPaletteClicked}
+          handleAddCustomBlock={this.handleAddCustomBlock}
+          handleDeleteCustomBlock={this.handleDeleteCustomBlock}
+        />
         {optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId ? (
           <Materials
             getLocaleString={getLocaleString}

@@ -1,7 +1,7 @@
 .siteHeader {
     background-color: var(--headerBackground);
     padding: 0.3em 0.6em 0.4em 0.6em;
-    margin-bottom: 0.5em;
+    margin-bottom: 1em;
 }
 
 .titleAndLanguages {
@@ -19,11 +19,17 @@
     flex-direction: row;
     flex-wrap: wrap;
     align-items: baseline;
-    column-gap: 0.5em;
+    column-gap: 0.7em;
 }
 
 .siteSubtitle {
     margin: 0;
+}
+
+.siteTitleSeparator {
+    font-size: 1.5em;
+    line-height: 1;
+    color: var(--rebaneGreen);
 }
 
 .fixedMessages {

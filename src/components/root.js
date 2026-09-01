@@ -65,6 +65,7 @@ class Root extends Component {
           <div className="titleAndLanguages">
             <div className="siteTitle">
               <h1>MapartCraft</h1>
+              <span className="siteTitleSeparator">{"·"}</span>
               <h3 className="siteSubtitle">{"RA1NING's version"}</h3>
               {this.props.match.params.countryCode && this.props.match.params.countryCode !== "en" && (
                 <small>{this.getLocaleString("TRANSLATION/CREDITS")}</small>

@@ -15,7 +15,7 @@ class Header extends Component {
           <a href="https://mike2b2t.github.io/mapartcraft" target="_blank" rel="noopener noreferrer">
             fork
           </a>
-          {" of "}
+          {" of rebane2001's "}
           <a href="https://rebane2001.com/mapartcraft" target="_blank" rel="noopener noreferrer">
             mapartcraft
           </a>
