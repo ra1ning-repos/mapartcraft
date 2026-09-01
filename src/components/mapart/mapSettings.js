@@ -63,6 +63,8 @@ class MapSettings extends Component {
       onOptionChange_dithering_propagation_green,
       optionValue_dithering_propagation_blue,
       onOptionChange_dithering_propagation_blue,
+      optionValue_dithering_boustrophedon,
+      onOptionChange_dithering_boustrophedon,
       optionValue_preprocessingEnabled,
       onOptionChange_PreProcessingEnabled,
       preProcessingValue_brightness,
@@ -575,10 +577,27 @@ class MapSettings extends Component {
         </td>
       </tr>
     );
+    const setting_dithering_boustrophedon = (
+      <tr>
+        <th>
+          <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/DITHERING/BOUSTROPHEDON-TT")}>
+            <b>
+              {getLocaleString("MAP-SETTINGS/DITHERING/BOUSTROPHEDON")}
+              {":"}
+            </b>
+          </Tooltip>{" "}
+        </th>
+        <td>
+          <input type="checkbox" checked={optionValue_dithering_boustrophedon} onChange={onOptionChange_dithering_boustrophedon} />
+        </td>
+        <td />
+      </tr>
+    );
     const setting_dithering_propagation = (
       <div>
         <table>
           <tbody>
+            {setting_dithering_boustrophedon}
             {setting_dithering_propagation_red}
             {setting_dithering_propagation_green}
             {setting_dithering_propagation_blue}

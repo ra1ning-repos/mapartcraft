@@ -49,6 +49,7 @@ class MapartController extends Component {
     optionValue_dithering_propagation_red: 100,
     optionValue_dithering_propagation_green: 100,
     optionValue_dithering_propagation_blue: 100,
+    optionValue_dithering_boustrophedon: false,
     optionValue_preprocessingEnabled: false,
     preProcessingValue_brightness: 100,
     preProcessingValue_contrast: 100,
@@ -361,6 +362,11 @@ class MapartController extends Component {
 
   onOptionChange_dithering_propagation_blue = (value) => {
     this.setState({ optionValue_dithering_propagation_blue: value });
+  };
+
+  onOptionChange_dithering_boustrophedon = () => {
+    const { optionValue_dithering_boustrophedon } = this.state;
+    this.setState({ optionValue_dithering_boustrophedon: !optionValue_dithering_boustrophedon });
   };
 
   onOptionChange_WhereSupportBlocks = (e) => {
@@ -796,6 +802,7 @@ class MapartController extends Component {
       optionValue_dithering_propagation_red,
       optionValue_dithering_propagation_green,
       optionValue_dithering_propagation_blue,
+      optionValue_dithering_boustrophedon,
       optionValue_preprocessingEnabled,
       preProcessingValue_brightness,
       preProcessingValue_contrast,
@@ -859,6 +866,7 @@ class MapartController extends Component {
             optionValue_dithering_propagation_red={optionValue_dithering_propagation_red}
             optionValue_dithering_propagation_green={optionValue_dithering_propagation_green}
             optionValue_dithering_propagation_blue={optionValue_dithering_propagation_blue}
+            optionValue_dithering_boustrophedon={optionValue_dithering_boustrophedon}
             optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
             preProcessingValue_brightness={preProcessingValue_brightness}
             preProcessingValue_contrast={preProcessingValue_contrast}
@@ -916,6 +924,8 @@ class MapartController extends Component {
               onOptionChange_dithering_propagation_green={this.onOptionChange_dithering_propagation_green}
               optionValue_dithering_propagation_blue={optionValue_dithering_propagation_blue}
               onOptionChange_dithering_propagation_blue={this.onOptionChange_dithering_propagation_blue}
+              optionValue_dithering_boustrophedon={optionValue_dithering_boustrophedon}
+              onOptionChange_dithering_boustrophedon={this.onOptionChange_dithering_boustrophedon}
               optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
               onOptionChange_PreProcessingEnabled={this.onOptionChange_PreProcessingEnabled}
               preProcessingValue_brightness={preProcessingValue_brightness}
@@ -955,6 +965,7 @@ class MapartController extends Component {
               optionValue_dithering_propagation_red={optionValue_dithering_propagation_red}
               optionValue_dithering_propagation_green={optionValue_dithering_propagation_green}
               optionValue_dithering_propagation_blue={optionValue_dithering_propagation_blue}
+              optionValue_dithering_boustrophedon={optionValue_dithering_boustrophedon}
               optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
               preProcessingValue_brightness={preProcessingValue_brightness}
               preProcessingValue_contrast={preProcessingValue_contrast}

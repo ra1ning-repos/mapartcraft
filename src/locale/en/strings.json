@@ -132,6 +132,8 @@
       "TITLE": "Dithering",
       "TITLE-TT": "Adds seemingly random pixels for the illusion of more colors",
       "NONE": "None",
+      "BOUSTROPHEDON": "Boustrophedonic error diffusion",
+      "BOUSTROPHEDON-TT": "Alternate the scan direction on every other row; reduces the diagonal streaking error diffusion can produce. No effect on ordered dithers.",
       "PROPAGATION-RED": "Red propagation",
       "PROPAGATION-GREEN": "Green propagation",
       "PROPAGATION-BLUE": "Blue propagation"

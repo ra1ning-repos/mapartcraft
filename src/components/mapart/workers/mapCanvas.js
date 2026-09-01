@@ -23,6 +23,7 @@ var optionValue_dithering;
 var optionValue_dithering_propagation_red;
 var optionValue_dithering_propagation_green;
 var optionValue_dithering_propagation_blue;
+var optionValue_dithering_boustrophedon;
 
 var colourSetsToUse = []; // colourSetIds and shades to use in map
 var exactColourCache = new Map(); // for mapping RGB that exactly matches in coloursJSON to colourSetId and tone
@@ -538,19 +539,27 @@ function getMapartImageDataAndMaterials() {
   ) {
     divisor = chosenDitherMethod.ditherDivisor;
   }
-  for (let i = 0; i < canvasImageData.data.length; i += 4) {
+  const multimapWidth = optionValue_mapSize_x * 128;
+  const multimapHeight = optionValue_mapSize_y * 128;
+  const totalPixels = canvasImageData.data.length / 4;
+  for (let scanIndex = 0; scanIndex < totalPixels; scanIndex++) {
+    const multimap_y = Math.floor(scanIndex / multimapWidth);
+    const scanOffset = scanIndex % multimapWidth;
+    // Boustrophedon (serpentine) scanning: odd-numbered rows are traversed right-to-left,
+    // which breaks up the diagonal worming artifacts error diffusion produces on plain raster scans.
+    const scanReversed = optionValue_dithering_boustrophedon && multimap_y % 2 === 1;
+    const multimap_x = scanReversed ? multimapWidth - 1 - scanOffset : scanOffset;
+    const i = (multimap_y * multimapWidth + multimap_x) * 4;
+
     const indexR = i;
     const indexG = i + 1;
     const indexB = i + 2;
     const indexA = i + 3;
 
-    const multimapWidth = optionValue_mapSize_x * 128;
-    const multimap_x = (i / 4) % multimapWidth;
-    const multimap_y = (i / 4 - multimap_x) / multimapWidth;
     const whichMap_x = Math.floor(multimap_x / 128);
     const whichMap_y = Math.floor(multimap_y / 128);
     const individualMap_y = multimap_y % 128;
-    if (multimap_x === 0) {
+    if (scanOffset === 0) {
       postMessage({
         head: "PROGRESS_REPORT",
         body: multimap_y / (128 * optionValue_mapSize_y),
@@ -638,84 +647,33 @@ function getMapartImageDataAndMaterials() {
             (oldPixel[2] - closestColour[2]) * optionValue_dithering_propagation_blue / 100.0
           ];
 
-          try {
-            // ditherMatrix [0][0...2] should always be zero, and can thus be skipped
-            if (multimap_x + 1 < multimapWidth) {
-              // Make sure to not carry over error from one side to the other
-              const weight = ditherMatrix[0][3] / divisor; // 1 right
-              canvasImageData.data[i + 4] += quant_error[0] * weight;
-              canvasImageData.data[i + 5] += quant_error[1] * weight;
-              canvasImageData.data[i + 6] += quant_error[2] * weight;
-              if (multimap_x + 2 < multimapWidth) {
-                const weight = ditherMatrix[0][4] / divisor; // 2 right
-                canvasImageData.data[i + 8] += quant_error[0] * weight;
-                canvasImageData.data[i + 9] += quant_error[1] * weight;
-                canvasImageData.data[i + 10] += quant_error[2] * weight;
-              }
+          // Distribute the quantisation error across the ditherMatrix neighbourhood.
+          // ditherMatrix is (up to) 3 rows x 5 columns with the current pixel at [0][2]:
+          // row index r means r rows below, column index c means (c - 2) pixels to the right.
+          // On a reversed scan line the kernel is mirrored horizontally, so error always
+          // travels in the direction of travel rather than back over finished pixels.
+          const scanDirection = scanReversed ? -1 : 1;
+          for (let matrixRow = 0; matrixRow < ditherMatrix.length; matrixRow++) {
+            const targetY = multimap_y + matrixRow;
+            if (targetY >= multimapHeight) {
+              break;
             }
-
-            // First row below
-            if (multimap_x > 0) {
-              // Order reversed, to allow nesting of 'if' blocks
-              const weight = ditherMatrix[1][1] / divisor; // 1 down, 1 left
-              canvasImageData.data[i + multimapWidth * 4 - 4] += quant_error[0] * weight;
-              canvasImageData.data[i + multimapWidth * 4 - 3] += quant_error[1] * weight;
-              canvasImageData.data[i + multimapWidth * 4 - 2] += quant_error[2] * weight;
-              if (multimap_x > 1) {
-                const weight = ditherMatrix[1][0] / divisor; // 1 down, 2 left
-                canvasImageData.data[i + multimapWidth * 4 - 8] += quant_error[0] * weight;
-                canvasImageData.data[i + multimapWidth * 4 - 7] += quant_error[1] * weight;
-                canvasImageData.data[i + multimapWidth * 4 - 6] += quant_error[2] * weight;
+            for (let matrixCol = 0; matrixCol < ditherMatrix[matrixRow].length; matrixCol++) {
+              const matrixWeight = ditherMatrix[matrixRow][matrixCol];
+              if (matrixWeight === 0) {
+                continue;
               }
-            }
-            let weight = ditherMatrix[1][2] / divisor; // 1 down
-            canvasImageData.data[i + multimapWidth * 4 + 0] += quant_error[0] * weight;
-            canvasImageData.data[i + multimapWidth * 4 + 1] += quant_error[1] * weight;
-            canvasImageData.data[i + multimapWidth * 4 + 2] += quant_error[2] * weight;
-            if (multimap_x + 1 < multimapWidth) {
-              const weight = ditherMatrix[1][3] / divisor; // 1 down, 1 right
-              canvasImageData.data[i + multimapWidth * 4 + 4] += quant_error[0] * weight;
-              canvasImageData.data[i + multimapWidth * 4 + 5] += quant_error[1] * weight;
-              canvasImageData.data[i + multimapWidth * 4 + 6] += quant_error[2] * weight;
-              if (multimap_x + 2 < multimapWidth) {
-                const weight = ditherMatrix[1][4] / divisor; // 1 down, 2 right
-                canvasImageData.data[i + multimapWidth * 4 + 8] += quant_error[0] * weight;
-                canvasImageData.data[i + multimapWidth * 4 + 9] += quant_error[1] * weight;
-                canvasImageData.data[i + multimapWidth * 4 + 10] += quant_error[2] * weight;
+              const targetX = multimap_x + (matrixCol - 2) * scanDirection;
+              if (targetX < 0 || targetX >= multimapWidth) {
+                // Make sure to not carry over error from one side to the other
+                continue;
               }
+              const targetIndex = (targetY * multimapWidth + targetX) * 4;
+              const weight = matrixWeight / divisor;
+              canvasImageData.data[targetIndex + 0] += quant_error[0] * weight;
+              canvasImageData.data[targetIndex + 1] += quant_error[1] * weight;
+              canvasImageData.data[targetIndex + 2] += quant_error[2] * weight;
             }
-
-            // Second row below
-            if (multimap_x > 0) {
-              const weight = ditherMatrix[2][1] / divisor; // 2 down, 1 left
-              canvasImageData.data[i + multimapWidth * 8 - 4] += quant_error[0] * weight;
-              canvasImageData.data[i + multimapWidth * 8 - 3] += quant_error[1] * weight;
-              canvasImageData.data[i + multimapWidth * 8 - 2] += quant_error[2] * weight;
-              if (multimap_x > 1) {
-                const weight = ditherMatrix[2][0] / divisor; // 2 down, 2 left
-                canvasImageData.data[i + multimapWidth * 8 - 8] += quant_error[0] * weight;
-                canvasImageData.data[i + multimapWidth * 8 - 7] += quant_error[1] * weight;
-                canvasImageData.data[i + multimapWidth * 8 - 6] += quant_error[2] * weight;
-              }
-            }
-            weight = ditherMatrix[2][2] / divisor; // 2 down
-            canvasImageData.data[i + multimapWidth * 8 + 0] += quant_error[0] * weight;
-            canvasImageData.data[i + multimapWidth * 8 + 1] += quant_error[1] * weight;
-            canvasImageData.data[i + multimapWidth * 8 + 2] += quant_error[2] * weight;
-            if (multimap_x + 1 < multimapWidth) {
-              const weight = ditherMatrix[2][3] / divisor; // 2 down, 1 right
-              canvasImageData.data[i + multimapWidth * 8 + 4] += quant_error[0] * weight;
-              canvasImageData.data[i + multimapWidth * 8 + 5] += quant_error[1] * weight;
-              canvasImageData.data[i + multimapWidth * 8 + 6] += quant_error[2] * weight;
-              if (multimap_x + 2 < multimapWidth) {
-                const weight = ditherMatrix[2][4] / divisor; // 2 down, 2 right
-                canvasImageData.data[i + multimapWidth * 8 + 8] += quant_error[0] * weight;
-                canvasImageData.data[i + multimapWidth * 8 + 9] += quant_error[1] * weight;
-                canvasImageData.data[i + multimapWidth * 8 + 10] += quant_error[2] * weight;
-              }
-            }
-          } catch (e) {
-            console.log(e); // ???
           }
           break;
         }
@@ -917,6 +875,7 @@ onmessage = (e) => {
   optionValue_dithering_propagation_red = e.data.body.optionValue_dithering_propagation_red;
   optionValue_dithering_propagation_green = e.data.body.optionValue_dithering_propagation_green;
   optionValue_dithering_propagation_blue = e.data.body.optionValue_dithering_propagation_blue;
+  optionValue_dithering_boustrophedon = e.data.body.optionValue_dithering_boustrophedon;
 
   setupColourSetsToUse();
   setupExactColourCache();
