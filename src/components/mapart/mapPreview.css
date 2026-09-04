@@ -54,3 +54,26 @@
   background-color: #688e6b;
   height: 24px;
 }
+
+/* Modal shown while the context-based space filling curve for the Rain dithers is being generated */
+.curvePopup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 300;
+  min-width: 18em;
+  padding: 0.6em 0.8em;
+  border: 0.1em solid var(--rebaneGreen);
+  background-color: #333;
+  text-align: center;
+}
+
+.curvePopup p {
+  margin: 0 0 0.5em 0;
+}
+
+.curvePopupProgress {
+  position: relative;
+  text-align: left;
+}

@@ -3,6 +3,7 @@ import React, { Component, createRef } from "react";
 import Tooltip from "../tooltip";
 import WorkerBuilder from './workers/worker-builder';
 import MapCanvasWorker from "./workers/mapCanvas";
+import ContextualCurveWorker from "./workers/contextualCurve";
 
 import BackgroundColourModes from "./json/backgroundColourModes.json";
 import ColourMethods from "./json/colourMethods.json";
@@ -21,9 +22,18 @@ class MapPreview extends Component {
   state = {
     mapPreviewSizeScale: 2,
     workerProgress: 0,
+    curveGenerating: false,
+    curveProgress: 0,
   };
 
   mapCanvasWorker = new WorkerBuilder(MapCanvasWorker);
+  curveWorker = null;
+  curveWorkerKey = null; // geometry the in-flight curve worker (if any) is generating for
+  curveOnReady = null; // what to do with the curve when it lands; replaced if the image is redrawn meanwhile
+  // The context-based space filling curve for the Rain dithers depends only on the raw uploaded
+  // image and the canvas geometry, not on preprocessing or any other setting, so it is generated
+  // once and reused until the image, map size or crop changes.
+  curveCache = { key: null, order: null };
 
   constructor(props) {
     super(props);
@@ -59,6 +69,8 @@ class MapPreview extends Component {
     return (
       newProps.uploadedImage !== null &&
       prevState.workerProgress === newState.workerProgress &&
+      prevState.curveGenerating === newState.curveGenerating &&
+      prevState.curveProgress === newState.curveProgress &&
       !propChanges.every((elt) => {
         return elt === true;
       })
@@ -103,6 +115,8 @@ class MapPreview extends Component {
     return (
       newProps.uploadedImage !== null &&
       prevState.workerProgress === newState.workerProgress &&
+      prevState.curveGenerating === newState.curveGenerating &&
+      prevState.curveProgress === newState.curveProgress &&
       !propChanges.every((elt) => {
         return elt === true;
       })
@@ -205,15 +219,6 @@ class MapPreview extends Component {
       preProcessingValue_saturation,
       preProcessingValue_backgroundColourSelect,
       preProcessingValue_backgroundColour,
-      uploadedImage,
-    } = this.props;
-    const {
-      optionValue_mapSize_x,
-      optionValue_mapSize_y,
-      optionValue_cropImage,
-      optionValue_cropImage_zoom,
-      optionValue_cropImage_percent_x,
-      optionValue_cropImage_percent_y,
     } = this.props;
     const { canvasRef_source } = this;
     const ctx_source = canvasRef_source.current.getContext("2d");
@@ -244,6 +249,26 @@ class MapPreview extends Component {
       ctx_source.filter = "none";
     }
 
+    this.drawUploadedImageToContext(ctx_source);
+
+    if (optionValue_preprocessingEnabled) {
+      this.applyPreProcessingPixelPass(ctx_source);
+    }
+  }
+
+  // Draws the uploaded image onto a context of canvas size, honouring the crop settings. Whatever
+  // filter the context has set is applied by drawImage as usual, so the source canvas gets the
+  // preprocessing filter and the curve generator's scratch canvas gets none.
+  drawUploadedImageToContext(ctx_source) {
+    const {
+      optionValue_mapSize_x,
+      optionValue_mapSize_y,
+      optionValue_cropImage,
+      optionValue_cropImage_zoom,
+      optionValue_cropImage_percent_x,
+      optionValue_cropImage_percent_y,
+      uploadedImage,
+    } = this.props;
     switch (optionValue_cropImage) {
       case CropModes.OFF.uniqueId: {
         ctx_source.drawImage(uploadedImage, 0, 0, ctx_source.canvas.width, ctx_source.canvas.height);
@@ -287,10 +312,6 @@ class MapPreview extends Component {
       default: {
         throw new Error("Unknown optionValue_cropImage");
       }
-    }
-
-    if (optionValue_preprocessingEnabled) {
-      this.applyPreProcessingPixelPass(ctx_source);
     }
   }
 
@@ -369,9 +390,121 @@ class MapPreview extends Component {
     ctx_source.putImageData(imageData, 0, 0);
   }
 
+  isCurveDither(ditherUniqueId) {
+    const method = DitherMethods[Object.keys(DitherMethods).find((key) => DitherMethods[key].uniqueId === ditherUniqueId)];
+    return method !== undefined && "curveWeights" in method;
+  }
+
+  curveCacheKey() {
+    const { uploadedImage, optionValue_mapSize_x, optionValue_mapSize_y, optionValue_cropImage, optionValue_cropImage_zoom, optionValue_cropImage_percent_x, optionValue_cropImage_percent_y } =
+      this.props;
+    return {
+      uploadedImage,
+      optionValue_mapSize_x,
+      optionValue_mapSize_y,
+      optionValue_cropImage,
+      optionValue_cropImage_zoom,
+      optionValue_cropImage_percent_x,
+      optionValue_cropImage_percent_y,
+    };
+  }
+
+  curveKeysMatch(a, b) {
+    return a !== null && b !== null && Object.keys(b).every((field) => a[field] === b[field]);
+  }
+
+  curveCacheIsCurrent(key) {
+    return this.curveCache.order !== null && this.curveKeysMatch(this.curveCache.key, key);
+  }
+
+  stopCurveWorker() {
+    if (this.curveWorker !== null) {
+      this.curveWorker.terminate();
+      this.curveWorker = null;
+      this.curveWorkerKey = null;
+      this.curveOnReady = null;
+    }
+    if (this.state.curveGenerating) {
+      this.setState({ curveGenerating: false });
+    }
+  }
+
+  // Generates the context-based space filling curve for the current image and geometry in a worker,
+  // then hands the finished Uint32Array of pixel indices to onReady. The curve is built from the raw
+  // uploaded image (no preprocessing filter, no background fill) drawn with the same crop, so that
+  // tweaking preprocessing never invalidates it.
+  generateContextualCurve(key, onReady) {
+    const { canvasRef_source } = this;
+    const width = canvasRef_source.current.width;
+    const height = canvasRef_source.current.height;
+    const scratchCanvas = document.createElement("canvas");
+    scratchCanvas.width = width;
+    scratchCanvas.height = height;
+    const ctx_scratch = scratchCanvas.getContext("2d");
+    ctx_scratch.imageSmoothingEnabled = true;
+    ctx_scratch.imageSmoothingQuality = "high";
+    ctx_scratch.filter = "none";
+    this.drawUploadedImageToContext(ctx_scratch);
+    const rawImageData = ctx_scratch.getImageData(0, 0, width, height);
+
+    this.setState({ curveGenerating: true, curveProgress: 0 });
+    const t0 = performance.now();
+    this.curveWorkerKey = key;
+    this.curveOnReady = onReady;
+    this.curveWorker = new WorkerBuilder(ContextualCurveWorker);
+    this.curveWorker.onmessage = (e) => {
+      if (e.data.head === "PROGRESS_REPORT") {
+        this.setState({ curveProgress: e.data.body });
+      } else if (e.data.head === "CURVE") {
+        const t1 = performance.now();
+        console.log(`Generated contextual space filling curve (${width}x${height}) in ${(t1 - t0).toString()}ms`);
+        const whenReady = this.curveOnReady;
+        this.curveWorker.terminate();
+        this.curveWorker = null;
+        this.curveWorkerKey = null;
+        this.curveOnReady = null;
+        this.curveCache = { key: key, order: e.data.body.order };
+        this.setState({ curveGenerating: false, curveProgress: 1 });
+        whenReady(e.data.body.order);
+      }
+    };
+    this.curveWorker.postMessage({
+      head: "GENERATE",
+      body: { width: width, height: height, pixels: rawImageData.data },
+    });
+  }
+
   updateCanvas_display() {
     this.mapCanvasWorker.terminate();
-    const { canvasRef_source, canvasRef_display } = this;
+    const { canvasRef_source } = this;
+    const { optionValue_dithering } = this.props;
+    const ctx_source = canvasRef_source.current.getContext("2d");
+    const canvasImageData = ctx_source.getImageData(0, 0, ctx_source.canvas.width, ctx_source.canvas.height);
+
+    if (!this.isCurveDither(optionValue_dithering)) {
+      this.stopCurveWorker();
+      this.runMapCanvasWorker(canvasImageData, null);
+      return;
+    }
+    const key = this.curveCacheKey();
+    if (this.curveCacheIsCurrent(key)) {
+      this.stopCurveWorker();
+      this.runMapCanvasWorker(canvasImageData, this.curveCache.order);
+      return;
+    }
+    const onReady = (order) => this.runMapCanvasWorker(canvasImageData, order);
+    if (this.curveWorker !== null && this.curveKeysMatch(this.curveWorkerKey, key)) {
+      // A curve for exactly this image and geometry is already on its way (the user is most likely
+      // still moving preprocessing sliders). Let it finish; just make sure it dithers the newest pixels.
+      this.curveOnReady = onReady;
+      return;
+    }
+    this.stopCurveWorker();
+    this.generateContextualCurve(key, onReady);
+  }
+
+  runMapCanvasWorker(canvasImageData, curveOrder) {
+    const { canvasRef_display } = this;
     const {
       coloursJSON,
       selectedBlocks,
@@ -392,8 +525,6 @@ class MapPreview extends Component {
       onGetMapMaterials,
       onMapPreviewWorker_begin,
     } = this.props;
-    const ctx_source = canvasRef_source.current.getContext("2d");
-    const canvasImageData = ctx_source.getImageData(0, 0, ctx_source.canvas.width, ctx_source.canvas.height);
     const t0 = performance.now();
     this.mapCanvasWorker = new WorkerBuilder(MapCanvasWorker);
     this.mapCanvasWorker.onmessage = (e) => {
@@ -437,6 +568,7 @@ class MapPreview extends Component {
         optionValue_dithering_propagation_green: optionValue_dithering_propagation_green,
         optionValue_dithering_propagation_blue: optionValue_dithering_propagation_blue,
         optionValue_dithering_boustrophedon: optionValue_dithering_boustrophedon,
+        optionValue_curveOrder: curveOrder,
       },
     });
   }
@@ -455,6 +587,9 @@ class MapPreview extends Component {
 
   componentWillUnmount() {
     this.mapCanvasWorker.terminate();
+    if (this.curveWorker !== null) {
+      this.curveWorker.terminate();
+    }
   }
 
   render() {
@@ -467,10 +602,19 @@ class MapPreview extends Component {
       onFileDialogEvent,
       uploadedImage,
     } = this.props;
-    const { mapPreviewSizeScale, workerProgress } = this.state;
+    const { mapPreviewSizeScale, workerProgress, curveGenerating, curveProgress } = this.state;
     return (
       <div className="section mapPreviewDiv">
         <h2>{getLocaleString("MAP-PREVIEW/TITLE")}</h2>
+        {curveGenerating && (
+          <div className="curvePopup">
+            <p>{getLocaleString("MAP-PREVIEW/GENERATING-CURVE")}</p>
+            <div className="progress curvePopupProgress">
+              <span className="progressText">{`${Math.floor(curveProgress * 100)}%`}</span>
+              <div className="progressDiv" style={{ width: `${(curveProgress * 100).toString()}%` }} />
+            </div>
+          </div>
+        )}
         <input type="file" className="imgUpload" ref={this.fileInputRef} onChange={onFileDialogEvent} />
         <div>
           <span

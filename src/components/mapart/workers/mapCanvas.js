@@ -24,6 +24,7 @@ var optionValue_dithering_propagation_red;
 var optionValue_dithering_propagation_green;
 var optionValue_dithering_propagation_blue;
 var optionValue_dithering_boustrophedon;
+var optionValue_curveOrder; // Uint32Array of pixel indices in space-filling-curve order, or null
 
 var colourSetsToUse = []; // colourSetIds and shades to use in map
 var exactColourCache = new Map(); // for mapping RGB that exactly matches in coloursJSON to colourSetId and tone
@@ -535,6 +536,9 @@ function getMapartImageDataAndMaterials() {
       DitherMethods.Burkes.uniqueId,
       DitherMethods.Sierra.uniqueId,
       DitherMethods.SierraTworow.uniqueId,
+      DitherMethods.Rain.uniqueId,
+      DitherMethods.Rain_24.uniqueId,
+      DitherMethods.Rain_32.uniqueId,
     ].includes(chosenDitherMethod.uniqueId)
   ) {
     divisor = chosenDitherMethod.ditherDivisor;
@@ -542,6 +546,69 @@ function getMapartImageDataAndMaterials() {
   const multimapWidth = optionValue_mapSize_x * 128;
   const multimapHeight = optionValue_mapSize_y * 128;
   const totalPixels = canvasImageData.data.length / 4;
+
+  // ---- Curve dithers (Riemersma-style error diffusion along a context-based space filling curve).
+  // The support-block accounting inside the main loop below reads the already-quantised pixels
+  // directly above the current one, which is only safe in raster order. So curve dithers quantise
+  // every pixel here first, walking the curve and pushing error forward along it, and remember the
+  // colour chosen for each pixel. The main loop then runs in its usual raster order purely for the
+  // accounting, picking each pixel's colour back up from curveChosenColours instead of re-matching.
+  const isCurveDither = "curveWeights" in chosenDitherMethod;
+  let curveChosenColours = null;
+  if (isCurveDither) {
+    if (!optionValue_curveOrder || optionValue_curveOrder.length !== totalPixels) {
+      throw new Error("Curve dither selected but no matching space filling curve was supplied");
+    }
+    const curveWeights = chosenDitherMethod.curveWeights;
+    curveChosenColours = new Array(totalPixels);
+    for (let step = 0; step < totalPixels; step++) {
+      const pixelIndex = optionValue_curveOrder[step];
+      const i = pixelIndex * 4;
+      if (step % multimapWidth === 0) {
+        postMessage({
+          head: "PROGRESS_REPORT",
+          body: step / totalPixels,
+        });
+      }
+      // Same transparency handling as the main loop, so both passes agree on which pixels are colours.
+      if (
+        optionValue_modeNBTOrMapdat === MapModes.MAPDAT.uniqueId &&
+        optionValue_transparency &&
+        canvasImageData.data[i + 3] < optionValue_transparencyTolerance
+      ) {
+        canvasImageData.data[i] = 0;
+        canvasImageData.data[i + 1] = 0;
+        canvasImageData.data[i + 2] = 0;
+        canvasImageData.data[i + 3] = 0;
+        continue;
+      }
+      if (canvasImageData.data[i + 3] !== 0 || selectedBlocks[alphaColorIdx] < 0) {
+        canvasImageData.data[i + 3] = 255;
+      }
+      const oldPixel = [canvasImageData.data[i], canvasImageData.data[i + 1], canvasImageData.data[i + 2]];
+      const chosen = findClosestColourSetIdAndToneAndRGBTo(oldPixel);
+      const closestColour = colourSetIdAndToneToRGB(chosen.colourSetId, chosen.tone);
+      canvasImageData.data[i] = closestColour[0];
+      canvasImageData.data[i + 1] = closestColour[1];
+      canvasImageData.data[i + 2] = closestColour[2];
+      curveChosenColours[pixelIndex] = chosen;
+
+      const quant_error = [
+        (oldPixel[0] - closestColour[0]) * optionValue_dithering_propagation_red / 100.0,
+        (oldPixel[1] - closestColour[1]) * optionValue_dithering_propagation_green / 100.0,
+        (oldPixel[2] - closestColour[2]) * optionValue_dithering_propagation_blue / 100.0
+      ];
+      // Push the error forward along the curve: curveWeights[k] goes to the pixel k+1 steps ahead.
+      for (let k = 0; k < curveWeights.length && step + 1 + k < totalPixels; k++) {
+        const targetIndex = optionValue_curveOrder[step + 1 + k] * 4;
+        const weight = curveWeights[k] / divisor;
+        canvasImageData.data[targetIndex + 0] += quant_error[0] * weight;
+        canvasImageData.data[targetIndex + 1] += quant_error[1] * weight;
+        canvasImageData.data[targetIndex + 2] += quant_error[2] * weight;
+      }
+    }
+  }
+
   for (let scanIndex = 0; scanIndex < totalPixels; scanIndex++) {
     const multimap_y = Math.floor(scanIndex / multimapWidth);
     const scanOffset = scanIndex % multimapWidth;
@@ -559,7 +626,7 @@ function getMapartImageDataAndMaterials() {
     const whichMap_x = Math.floor(multimap_x / 128);
     const whichMap_y = Math.floor(multimap_y / 128);
     const individualMap_y = multimap_y % 128;
-    if (scanOffset === 0) {
+    if (scanOffset === 0 && !isCurveDither) {
       postMessage({
         head: "PROGRESS_REPORT",
         body: multimap_y / (128 * optionValue_mapSize_y),
@@ -675,6 +742,13 @@ function getMapartImageDataAndMaterials() {
               canvasImageData.data[targetIndex + 2] += quant_error[2] * weight;
             }
           }
+          break;
+        }
+        case DitherMethods.Rain.uniqueId:
+        case DitherMethods.Rain_24.uniqueId:
+        case DitherMethods.Rain_32.uniqueId: {
+          // Already quantised along the curve in the pre-pass above; just recover the chosen colour.
+          closestColourSetIdAndTone = curveChosenColours[i / 4];
           break;
         }
         default:
@@ -876,6 +950,7 @@ onmessage = (e) => {
   optionValue_dithering_propagation_green = e.data.body.optionValue_dithering_propagation_green;
   optionValue_dithering_propagation_blue = e.data.body.optionValue_dithering_propagation_blue;
   optionValue_dithering_boustrophedon = e.data.body.optionValue_dithering_boustrophedon;
+  optionValue_curveOrder = e.data.body.optionValue_curveOrder;
 
   setupColourSetsToUse();
   setupExactColourCache();

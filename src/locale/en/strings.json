@@ -69,7 +69,8 @@
     "BEST-RESOLUTION-TT": "A source image with this resolution will work the best",
     "ASPECT-RATIO-MISMATCH-TT": "Image doesn't match map's aspect ratio",
     "SCALE-MINUS-TT": "Make preview smaller",
-    "SCALE-PLUS-TT": "Make preview bigger"
+    "SCALE-PLUS-TT": "Make preview bigger",
+    "GENERATING-CURVE": "Generating space-filling curve…"
   },
   "MAP-SETTINGS": {
     "TITLE": "Settings",

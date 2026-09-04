@@ -164,6 +164,24 @@
     ],
     "ditherDivisor": 16.0
   },
+  "Rain": {
+    "uniqueId": 25,
+    "name": "Rain Custom (/16 sharpen)",
+    "curveWeights": [7, 5, 3, 1],
+    "ditherDivisor": 16.0
+  },
+  "Rain_24": {
+    "uniqueId": 26,
+    "name": "Rain Custom (/24 sharpen)",
+    "curveWeights": [7, 5, 3, 1],
+    "ditherDivisor": 24.0
+  },
+  "Rain_32": {
+    "uniqueId": 27,
+    "name": "Rain Custom (/32 sharpen)",
+    "curveWeights": [7, 5, 3, 1],
+    "ditherDivisor": 32.0
+  },
   "Bayer22": {
     "uniqueId": 3,
     "name": "Bayer (2x2)",
