@@ -334,7 +334,7 @@ class BlockSelection extends Component {
       </React.Fragment>
     );
     return (
-      <div className="section blockSelectionDiv">
+      <div className="section boxed blockSelectionDiv">
         {presetsManagement}
         <details>
           <summary>{getLocaleString("BLOCK-SELECTION/EDIT-BLOCKS")}</summary>

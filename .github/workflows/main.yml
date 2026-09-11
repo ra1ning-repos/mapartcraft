@@ -21,9 +21,6 @@ concurrency:
   group: 'pages'
   cancel-in-progress: false
 
-env:
-  GH_REPO: '/mapartcraft/'
-
 jobs:
   # Single deploy job since we're just deploying
   build:

@@ -181,7 +181,7 @@ class Materials extends Component {
     const supportBlockCount = this.getMaterialsCount_supportBlock();
     const supportBlockIds = this.colourSetIdAndBlockIdFromNBTName(optionValue_supportBlock);
     return (
-      <div className="section materialsDiv">
+      <div className="section boxed materialsDiv">
         <h2>{getLocaleString("MATERIALS/TITLE")}</h2>
         <Tooltip tooltipText={getLocaleString("MATERIALS/SHOW-PER-SPLIT-TT")}>
           <b>

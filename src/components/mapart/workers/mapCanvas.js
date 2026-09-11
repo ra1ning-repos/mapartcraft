@@ -547,6 +547,31 @@ function getMapartImageDataAndMaterials() {
   const multimapHeight = optionValue_mapSize_y * 128;
   const totalPixels = canvasImageData.data.length / 4;
 
+  // ---- Error diffusion bookkeeping.
+  // Diffused error used to be added straight into canvasImageData.data, which is a Uint8ClampedArray:
+  // every write rounds to an integer and clamps to 0..255. That lost error twice over. Fractions were
+  // rounded away on every single write (a weight of 1/32 of a small error rounds to exactly nothing),
+  // and any pixel pushed below 0 or above 255 silently dropped the excess. Error now accumulates in a
+  // float buffer, one entry per channel per pixel, and is only combined with the pixel when that pixel
+  // is quantised. The pixel data itself is left untouched until its colour is chosen.
+  const isErrorDiffusionDither = divisor !== undefined;
+  const errorBuffer = isErrorDiffusionDither ? new Float32Array(totalPixels * 3) : null;
+
+  // Returns [adjustedRGB (floats, clamped to gamut), lookupRGB (integers for the colour cache)] for a pixel.
+  // The clamp is what keeps the whole scheme bounded: adjusted is always within 0..255 and every palette
+  // colour is within 0..255, so no quantisation error can ever exceed 255 in magnitude, and since every
+  // kernel's weights sum to at most 1 (divisor >= sum of weights), no buffer entry can either. Error that
+  // would push a pixel outside the gamut is dropped here, once, on the accumulated total, rather than on
+  // every incoming write, so a pixel that is only slightly out of gamut keeps everything that fits.
+  const readPixelWithError = (i, errIndex) => {
+    const adjusted = [
+      Math.min(Math.max(canvasImageData.data[i] + errorBuffer[errIndex], 0), 255),
+      Math.min(Math.max(canvasImageData.data[i + 1] + errorBuffer[errIndex + 1], 0), 255),
+      Math.min(Math.max(canvasImageData.data[i + 2] + errorBuffer[errIndex + 2], 0), 255),
+    ];
+    return [adjusted, [Math.round(adjusted[0]), Math.round(adjusted[1]), Math.round(adjusted[2])]];
+  };
+
   // ---- Curve dithers (Riemersma-style error diffusion along a context-based space filling curve).
   // The support-block accounting inside the main loop below reads the already-quantised pixels
   // directly above the current one, which is only safe in raster order. So curve dithers quantise
@@ -585,8 +610,8 @@ function getMapartImageDataAndMaterials() {
       if (canvasImageData.data[i + 3] !== 0 || selectedBlocks[alphaColorIdx] < 0) {
         canvasImageData.data[i + 3] = 255;
       }
-      const oldPixel = [canvasImageData.data[i], canvasImageData.data[i + 1], canvasImageData.data[i + 2]];
-      const chosen = findClosestColourSetIdAndToneAndRGBTo(oldPixel);
+      const [adjustedPixel, lookupPixel] = readPixelWithError(i, pixelIndex * 3);
+      const chosen = findClosestColourSetIdAndToneAndRGBTo(lookupPixel);
       const closestColour = colourSetIdAndToneToRGB(chosen.colourSetId, chosen.tone);
       canvasImageData.data[i] = closestColour[0];
       canvasImageData.data[i + 1] = closestColour[1];
@@ -594,17 +619,17 @@ function getMapartImageDataAndMaterials() {
       curveChosenColours[pixelIndex] = chosen;
 
       const quant_error = [
-        (oldPixel[0] - closestColour[0]) * optionValue_dithering_propagation_red / 100.0,
-        (oldPixel[1] - closestColour[1]) * optionValue_dithering_propagation_green / 100.0,
-        (oldPixel[2] - closestColour[2]) * optionValue_dithering_propagation_blue / 100.0
+        (adjustedPixel[0] - closestColour[0]) * optionValue_dithering_propagation_red / 100.0,
+        (adjustedPixel[1] - closestColour[1]) * optionValue_dithering_propagation_green / 100.0,
+        (adjustedPixel[2] - closestColour[2]) * optionValue_dithering_propagation_blue / 100.0
       ];
       // Push the error forward along the curve: curveWeights[k] goes to the pixel k+1 steps ahead.
       for (let k = 0; k < curveWeights.length && step + 1 + k < totalPixels; k++) {
-        const targetIndex = optionValue_curveOrder[step + 1 + k] * 4;
+        const targetErrIndex = optionValue_curveOrder[step + 1 + k] * 3;
         const weight = curveWeights[k] / divisor;
-        canvasImageData.data[targetIndex + 0] += quant_error[0] * weight;
-        canvasImageData.data[targetIndex + 1] += quant_error[1] * weight;
-        canvasImageData.data[targetIndex + 2] += quant_error[2] * weight;
+        errorBuffer[targetErrIndex + 0] += quant_error[0] * weight;
+        errorBuffer[targetErrIndex + 1] += quant_error[1] * weight;
+        errorBuffer[targetErrIndex + 2] += quant_error[2] * weight;
       }
     }
   }
@@ -702,16 +727,17 @@ function getMapartImageDataAndMaterials() {
         case DitherMethods.Sierra.uniqueId:
         case DitherMethods.SierraTworow.uniqueId:
         {
-          closestColourSetIdAndTone = findClosestColourSetIdAndToneAndRGBTo(oldPixel);
+          const [adjustedPixel, lookupPixel] = readPixelWithError(i, (i / 4) * 3);
+          closestColourSetIdAndTone = findClosestColourSetIdAndToneAndRGBTo(lookupPixel);
           const closestColour = colourSetIdAndToneToRGB(closestColourSetIdAndTone.colourSetId, closestColourSetIdAndTone.tone);
           canvasImageData.data[indexR] = closestColour[0];
           canvasImageData.data[indexG] = closestColour[1];
           canvasImageData.data[indexB] = closestColour[2];
 
           const quant_error = [
-            (oldPixel[0] - closestColour[0]) * optionValue_dithering_propagation_red / 100.0,
-            (oldPixel[1] - closestColour[1]) * optionValue_dithering_propagation_green / 100.0,
-            (oldPixel[2] - closestColour[2]) * optionValue_dithering_propagation_blue / 100.0
+            (adjustedPixel[0] - closestColour[0]) * optionValue_dithering_propagation_red / 100.0,
+            (adjustedPixel[1] - closestColour[1]) * optionValue_dithering_propagation_green / 100.0,
+            (adjustedPixel[2] - closestColour[2]) * optionValue_dithering_propagation_blue / 100.0
           ];
 
           // Distribute the quantisation error across the ditherMatrix neighbourhood.
@@ -735,11 +761,11 @@ function getMapartImageDataAndMaterials() {
                 // Make sure to not carry over error from one side to the other
                 continue;
               }
-              const targetIndex = (targetY * multimapWidth + targetX) * 4;
+              const targetErrIndex = (targetY * multimapWidth + targetX) * 3;
               const weight = matrixWeight / divisor;
-              canvasImageData.data[targetIndex + 0] += quant_error[0] * weight;
-              canvasImageData.data[targetIndex + 1] += quant_error[1] * weight;
-              canvasImageData.data[targetIndex + 2] += quant_error[2] * weight;
+              errorBuffer[targetErrIndex + 0] += quant_error[0] * weight;
+              errorBuffer[targetErrIndex + 1] += quant_error[1] * weight;
+              errorBuffer[targetErrIndex + 2] += quant_error[2] * weight;
             }
           }
           break;

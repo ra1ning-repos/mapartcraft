@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  row-gap: 0.6em;
 }
 
 /* Block selection sits on its own row above these two, and materials on its own row below,
@@ -15,6 +16,8 @@
   flex-wrap: wrap;
   justify-content: flex-start;
   align-items: flex-start;
+  column-gap: 0.6em;
+  row-gap: 0.6em;
 }
 
 .sectionsSettingsAndPreview > * {
@@ -26,6 +29,22 @@
   display: block;
 }
 
+/* Takes whatever width the settings column leaves on the row and centres the preview inside it.
+   flex-basis stays auto (the preview's own width), so the wrap rule above is unchanged: the area
+   only drops below settings once the preview itself no longer fits beside them. */
+.sectionPreviewArea {
+  flex: 1 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
 .section {
   padding: 0.3em;
+}
+
+/* Same panel treatment as the site header, for settings, block selection and materials */
+.boxed {
+  background-color: var(--headerBackground);
+  padding: 0.4em 0.6em 0.5em 0.6em;
 }

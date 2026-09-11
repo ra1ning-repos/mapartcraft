@@ -282,7 +282,7 @@ class Map_NBT {
         },
         author: {
           type: TagTypes.string,
-          value: "mike2b2t.github.io/mapartcraft",
+          value: "ra1ning-repos.github.io/mapartcraft",
         },
         DataVersion: {
           type: TagTypes.int,

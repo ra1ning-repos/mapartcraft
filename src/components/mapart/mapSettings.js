@@ -1061,7 +1061,7 @@ class MapSettings extends Component {
       </React.Fragment>
     );
     const settingsDiv = (
-      <div className="section settingsDiv">
+      <div className="section boxed settingsDiv">
         <h2>{getLocaleString("MAP-SETTINGS/TITLE")}</h2>
         {setting_version}
         {setting_mapSize}
