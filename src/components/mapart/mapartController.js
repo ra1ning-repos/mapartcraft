@@ -48,7 +48,7 @@ class MapartController extends Component {
     optionValue_dithering_propagation_red: SettingDefaults.optionValue_dithering_propagation_red,
     optionValue_dithering_propagation_green: SettingDefaults.optionValue_dithering_propagation_green,
     optionValue_dithering_propagation_blue: SettingDefaults.optionValue_dithering_propagation_blue,
-    optionValue_dithering_boustrophedon: false,
+    optionValue_dithering_boustrophedon: true,
     optionValue_preprocessingEnabled: false,
     preProcessingValue_brightness: SettingDefaults.preProcessingValue_brightness,
     preProcessingValue_contrast: SettingDefaults.preProcessingValue_contrast,

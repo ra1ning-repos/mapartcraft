@@ -48,3 +48,10 @@
   background-color: var(--headerBackground);
   padding: 0.4em 0.6em 0.5em 0.6em;
 }
+
+/* The column stretches its rows edge to edge so the settings/preview row can share out the width,
+   but these two panels sit in the column on their own and should hug their content instead. */
+.blockSelectionDiv,
+.materialsDiv {
+  align-self: flex-start;
+}
