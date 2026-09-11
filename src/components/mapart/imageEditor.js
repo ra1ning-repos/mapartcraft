@@ -28,6 +28,16 @@ import "./imageEditor.css";
 const TOOL_BRUSH = "brush";
 const TOOL_BUCKET = "bucket";
 const TOOL_EYEDROPPER = "eyedropper";
+const TOOL_PAN = "pan";
+const TOOL_ZOOM = "zoom";
+
+// The viewport is a square of VIEW_STEP multiples; the map (document) is drawn inside it at `zoom`
+// screen pixels per map pixel, offset so that map coordinate (panX, panY) sits at the viewport's top-left.
+const VIEW_STEP = 128;
+const VIEW_MIN = 128;
+const VIEW_MAX = 640; // five maps across
+const VIEW_DEFAULT = 384;
+const ZOOM_LEVELS = [0.125, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8, 12, 16, 24, 32];
 
 const HISTORY_LIMIT = 200;
 const MATERIALS_DEBOUNCE_MS = 400;
@@ -36,7 +46,8 @@ class ImageEditor extends Component {
   state = {
     tool: TOOL_BRUSH,
     brushColour: null, // [r, g, b] or null before anything has been picked
-    editorSizeScale: 3,
+    viewSize: VIEW_DEFAULT, // side of the square viewport, in screen pixels
+    zoom: 3, // mirrored from this.view for the readout; the live value is this.view.zoom
     canvasWidth: 128,
     canvasHeight: 128,
     undoDepth: 0,
@@ -44,11 +55,15 @@ class ImageEditor extends Component {
     editorMaterialsData: { pixelsData: null, maps: null, currentSelectedBlocks: null },
     materialsWorker_inProgress: false,
     pixelsOutsidePalette: 0,
+    panning: false,
     revision: 0, // bumped on every change so the palette/warnings re-render
   };
 
   canvasRef = React.createRef();
   imageData = null; // ImageData; the single source of truth for the picture
+  documentCanvas = null; // offscreen canvas mirroring imageData, drawn into the viewport scaled and offset
+  view = { zoom: 3, panX: 0, panY: 0 }; // kept off React state: it changes on every drag / wheel event
+  drag = null; // { mode: "paint" | "pan", lastX, lastY } while a mouse button is held
   undoStack = [];
   redoStack = [];
   currentStroke = null; // Map<pixelIndex, [r, g, b, a] before> while the mouse is down
@@ -59,13 +74,19 @@ class ImageEditor extends Component {
 
   componentDidMount() {
     this.imageData = new ImageData(this.state.canvasWidth, this.state.canvasHeight);
-    this.redraw();
+    this.documentCanvas = document.createElement("canvas");
+    this.syncDocumentCanvas();
+    this.zoomToFit();
     window.addEventListener("mouseup", this.onWindowMouseUp);
     window.addEventListener("keydown", this.onKeyDown);
+    // React registers wheel listeners as passive, which forbids preventDefault; Ctrl+wheel must not also
+    // zoom the browser, so the listener goes on the element directly.
+    this.canvasRef.current.addEventListener("wheel", this.onWheel, { passive: false });
     this.scheduleMaterials();
   }
 
-  componentDidUpdate(prevProps) {
+  componentDidUpdate(prevProps, prevState) {
+    this.componentDidUpdate_viewport(prevState);
     // The palette or the accounting rules changed: the tallies for the download buttons need redoing,
     // and the count of canvas pixels that are no longer paintable needs refreshing. The picture itself
     // is deliberately left alone.
@@ -84,10 +105,20 @@ class ImageEditor extends Component {
     }
   }
 
+  componentDidUpdate_viewport(prevState) {
+    if (prevState.viewSize !== this.state.viewSize) {
+      this.redraw(); // resizing a canvas element clears it
+    }
+  }
+
   componentWillUnmount() {
     this.unmounted = true;
     window.removeEventListener("mouseup", this.onWindowMouseUp);
+    window.removeEventListener("mousemove", this.onWindowMouseMove);
     window.removeEventListener("keydown", this.onKeyDown);
+    if (this.canvasRef.current !== null) {
+      this.canvasRef.current.removeEventListener("wheel", this.onWheel);
+    }
     clearTimeout(this.materialsTimer);
     if (this.materialsWorker !== null) {
       this.materialsWorker.terminate();
@@ -185,24 +216,114 @@ class ImageEditor extends Component {
 
   // ---------------------------------------------------------------- drawing
 
-  redraw() {
-    const canvas = this.canvasRef.current;
-    if (canvas === null || this.imageData === null) {
+  // Copies imageData into the offscreen document canvas. Called after every pixel change.
+  syncDocumentCanvas() {
+    if (this.documentCanvas === null || this.imageData === null) {
       return;
     }
-    canvas.getContext("2d").putImageData(this.imageData, 0, 0);
+    if (this.documentCanvas.width !== this.imageData.width || this.documentCanvas.height !== this.imageData.height) {
+      this.documentCanvas.width = this.imageData.width;
+      this.documentCanvas.height = this.imageData.height;
+    }
+    this.documentCanvas.getContext("2d").putImageData(this.imageData, 0, 0);
+  }
+
+  // Draws the document into the square viewport at the current pan and zoom, nearest-neighbour, with the
+  // scaled offset snapped to whole screen pixels so the pixel grid never shimmers.
+  redraw() {
+    const canvas = this.canvasRef.current;
+    if (canvas === null || this.documentCanvas === null) {
+      return;
+    }
+    const ctx = canvas.getContext("2d");
+    const { zoom, panX, panY } = this.view;
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const left = Math.round(-panX * zoom);
+    const top = Math.round(-panY * zoom);
+    const width = Math.round(this.imageData.width * zoom);
+    const height = Math.round(this.imageData.height * zoom);
+    ctx.drawImage(this.documentCanvas, left, top, width, height);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(left - 0.5, top - 0.5, width + 1, height + 1);
+  }
+
+  // Screen position of a mouse event -> fractional document coordinates
+  documentPointFromEvent(e) {
+    const rect = this.canvasRef.current.getBoundingClientRect();
+    const { zoom, panX, panY } = this.view;
+    return {
+      x: panX + (e.clientX - rect.left) / zoom,
+      y: panY + (e.clientY - rect.top) / zoom,
+      screenX: e.clientX - rect.left,
+      screenY: e.clientY - rect.top,
+    };
   }
 
   pixelIndexFromEvent(e) {
-    const canvas = this.canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const x = Math.floor(((e.clientX - rect.left) / rect.width) * this.imageData.width);
-    const y = Math.floor(((e.clientY - rect.top) / rect.height) * this.imageData.height);
-    if (x < 0 || y < 0 || x >= this.imageData.width || y >= this.imageData.height) {
+    const { x, y } = this.documentPointFromEvent(e);
+    const px = Math.floor(x);
+    const py = Math.floor(y);
+    if (px < 0 || py < 0 || px >= this.imageData.width || py >= this.imageData.height) {
       return null;
     }
-    return y * this.imageData.width + x;
+    return py * this.imageData.width + px;
   }
+
+  // ---------------------------------------------------------------- pan and zoom
+
+  // Keeps at least a sliver of the document inside the viewport so it can never be lost off-screen.
+  clampPan() {
+    const { zoom } = this.view;
+    const viewDoc = this.state.viewSize / zoom; // viewport size in document pixels
+    const minVisible = Math.min(32 / zoom, this.imageData.width, this.imageData.height);
+    this.view.panX = Math.min(Math.max(this.view.panX, -viewDoc + minVisible), this.imageData.width - minVisible);
+    this.view.panY = Math.min(Math.max(this.view.panY, -viewDoc + minVisible), this.imageData.height - minVisible);
+  }
+
+  setZoom(newZoom, anchorScreenX, anchorScreenY) {
+    // Zoom about a screen point: the document coordinate under it stays put.
+    const { zoom, panX, panY } = this.view;
+    const docX = panX + anchorScreenX / zoom;
+    const docY = panY + anchorScreenY / zoom;
+    this.view.zoom = newZoom;
+    this.view.panX = docX - anchorScreenX / newZoom;
+    this.view.panY = docY - anchorScreenY / newZoom;
+    this.clampPan();
+    this.redraw();
+    this.setState({ zoom: newZoom });
+  }
+
+  stepZoom(direction, anchorScreenX, anchorScreenY) {
+    const current = this.view.zoom;
+    const next = direction > 0 ? ZOOM_LEVELS.find((level) => level > current + 1e-9) : [...ZOOM_LEVELS].reverse().find((level) => level < current - 1e-9);
+    if (next !== undefined) {
+      this.setZoom(next, anchorScreenX, anchorScreenY);
+    }
+  }
+
+  // Fit the whole document in the viewport and centre it. Used when a document arrives or changes size.
+  zoomToFit() {
+    const { viewSize } = this.state;
+    const fit = Math.min(viewSize / this.imageData.width, viewSize / this.imageData.height);
+    this.view.zoom = fit;
+    this.view.panX = (this.imageData.width - viewSize / fit) / 2;
+    this.view.panY = (this.imageData.height - viewSize / fit) / 2;
+    this.redraw();
+    this.setState({ zoom: fit });
+  }
+
+  panBy(screenDx, screenDy) {
+    this.view.panX -= screenDx / this.view.zoom;
+    this.view.panY -= screenDy / this.view.zoom;
+    this.clampPan();
+    this.redraw();
+  }
+
+  changeViewSize = (delta) => {
+    this.setState((state) => ({ viewSize: Math.min(Math.max(state.viewSize + delta * VIEW_STEP, VIEW_MIN), VIEW_MAX) }));
+  };
 
   // Writes one pixel, remembering its previous value in the current stroke the first time it is touched.
   setPixel(pixelIndex, rgb) {
@@ -328,7 +449,8 @@ class ImageEditor extends Component {
 
   applySnapshot(snapshot) {
     this.imageData = new ImageData(new Uint8ClampedArray(snapshot.data), snapshot.width, snapshot.height);
-    this.setState({ canvasWidth: snapshot.width, canvasHeight: snapshot.height }, () => this.redraw());
+    this.syncDocumentCanvas();
+    this.setState({ canvasWidth: snapshot.width, canvasHeight: snapshot.height }, () => this.zoomToFit());
   }
 
   undo = () => {
@@ -360,6 +482,7 @@ class ImageEditor extends Component {
   };
 
   afterChange() {
+    this.syncDocumentCanvas();
     this.redraw();
     this.setState((state) => ({
       undoDepth: this.undoStack.length,
@@ -386,40 +509,86 @@ class ImageEditor extends Component {
 
   // ---------------------------------------------------------------- mouse and keyboard
 
-  onCanvasMouseDown = (e) => {
-    if (e.button !== 0) {
-      return;
+  pickColourAt(pixelIndex) {
+    const data = this.imageData.data;
+    const i = pixelIndex * 4;
+    if (data[i + 3] !== 0) {
+      this.setState({ brushColour: [data[i], data[i + 1], data[i + 2]] });
     }
+  }
+
+  beginPan(e) {
+    this.drag = { mode: "pan", lastX: e.clientX, lastY: e.clientY };
+    window.addEventListener("mousemove", this.onWindowMouseMove);
+    this.setState({ panning: true });
+  }
+
+  beginPaint(pixelIndex) {
+    this.currentStroke = new Map();
+    this.drag = { mode: "paint" };
+    this.setPixel(pixelIndex, this.state.brushColour);
+    this.lastPaintedPixel = pixelIndex;
+    this.syncDocumentCanvas();
+    this.redraw();
+    window.addEventListener("mousemove", this.onWindowMouseMove);
+  }
+
+  onCanvasMouseDown = (e) => {
     e.preventDefault();
     const pixelIndex = this.pixelIndexFromEvent(e);
-    if (pixelIndex === null) {
-      return;
-    }
-    const { tool, brushColour } = this.state;
-    const data = this.imageData.data;
-    if (tool === TOOL_EYEDROPPER) {
-      const i = pixelIndex * 4;
-      if (data[i + 3] !== 0) {
-        this.setState({ brushColour: [data[i], data[i + 1], data[i + 2]] });
+    // Modifier gestures work in every tool: right-click picks a colour, middle button or Ctrl+left pans.
+    if (e.button === 2) {
+      if (pixelIndex !== null) {
+        this.pickColourAt(pixelIndex);
       }
       return;
     }
-    if (brushColour === null) {
+    if (e.button === 1 || (e.button === 0 && (e.ctrlKey || e.metaKey))) {
+      this.beginPan(e);
       return;
     }
-    this.currentStroke = new Map();
-    if (tool === TOOL_BUCKET) {
-      this.floodFill(pixelIndex, brushColour);
-      this.finishStroke();
+    if (e.button !== 0) {
       return;
     }
-    this.setPixel(pixelIndex, brushColour);
-    this.lastPaintedPixel = pixelIndex;
-    this.redraw();
+    const { tool, brushColour } = this.state;
+    const { screenX, screenY } = this.documentPointFromEvent(e);
+    switch (tool) {
+      case TOOL_PAN:
+        this.beginPan(e);
+        return;
+      case TOOL_ZOOM:
+        this.stepZoom(e.altKey || e.shiftKey ? -1 : 1, screenX, screenY);
+        return;
+      case TOOL_EYEDROPPER:
+        if (pixelIndex !== null) {
+          this.pickColourAt(pixelIndex);
+        }
+        return;
+      case TOOL_BUCKET:
+        if (pixelIndex !== null && brushColour !== null) {
+          this.currentStroke = new Map();
+          this.floodFill(pixelIndex, brushColour);
+          this.finishStroke();
+        }
+        return;
+      case TOOL_BRUSH:
+      default:
+        if (pixelIndex !== null && brushColour !== null) {
+          this.beginPaint(pixelIndex);
+        }
+        return;
+    }
   };
 
-  onCanvasMouseMove = (e) => {
-    if (this.currentStroke === null || this.state.tool !== TOOL_BRUSH) {
+  // Attached to the window for the duration of a drag so leaving the canvas mid-gesture is harmless.
+  onWindowMouseMove = (e) => {
+    if (this.drag === null) {
+      return;
+    }
+    if (this.drag.mode === "pan") {
+      this.panBy(e.clientX - this.drag.lastX, e.clientY - this.drag.lastY);
+      this.drag.lastX = e.clientX;
+      this.drag.lastY = e.clientY;
       return;
     }
     const pixelIndex = this.pixelIndexFromEvent(e);
@@ -432,13 +601,31 @@ class ImageEditor extends Component {
       this.paintLine(this.lastPaintedPixel, pixelIndex, this.state.brushColour);
     }
     this.lastPaintedPixel = pixelIndex;
+    this.syncDocumentCanvas();
     this.redraw();
   };
 
   onWindowMouseUp = () => {
-    if (this.currentStroke !== null) {
-      this.finishStroke();
+    if (this.drag === null) {
+      return;
     }
+    const mode = this.drag.mode;
+    this.drag = null;
+    window.removeEventListener("mousemove", this.onWindowMouseMove);
+    if (mode === "paint") {
+      this.finishStroke();
+    } else {
+      this.setState({ panning: false });
+    }
+  };
+
+  onWheel = (e) => {
+    if (!(e.ctrlKey || e.metaKey)) {
+      return; // plain scrolling still scrolls the page
+    }
+    e.preventDefault();
+    const { screenX, screenY } = this.documentPointFromEvent(e);
+    this.stepZoom(e.deltaY < 0 ? 1 : -1, screenX, screenY);
   };
 
   onKeyDown = (e) => {
@@ -536,14 +723,22 @@ class ImageEditor extends Component {
 
   // ---------------------------------------------------------------- render
 
-  changeScale = (delta) => {
-    this.setState((state) => ({ editorSizeScale: Math.min(Math.max(state.editorSizeScale + delta, 1), 8) }));
-  };
-
   render() {
     const { getLocaleString, currentMaterialsData, mapPreviewWorker_inProgress, optionValue_mapSize_x, optionValue_mapSize_y, uploadedImage_baseFilename } = this.props;
-    const { tool, brushColour, editorSizeScale, canvasWidth, canvasHeight, undoDepth, redoDepth, editorMaterialsData, materialsWorker_inProgress, pixelsOutsidePalette } =
-      this.state;
+    const {
+      tool,
+      brushColour,
+      viewSize,
+      zoom,
+      canvasWidth,
+      canvasHeight,
+      undoDepth,
+      redoDepth,
+      editorMaterialsData,
+      materialsWorker_inProgress,
+      pixelsOutsidePalette,
+      panning,
+    } = this.state;
     const palette = this.getPalette();
     const brushKey = brushColour === null ? null : this.paletteKey(brushColour[0], brushColour[1], brushColour[2]);
     const canCopy = !mapPreviewWorker_inProgress && currentMaterialsData.pixelsData !== null && currentMaterialsData.pixelsData.length === 128 * optionValue_mapSize_x * 128 * optionValue_mapSize_y * 4;
@@ -554,13 +749,16 @@ class ImageEditor extends Component {
       </button>
     );
     const brushSwatchEntry = brushKey === null ? undefined : palette.find(({ rgb }) => this.paletteKey(rgb[0], rgb[1], rgb[2]) === brushKey);
+    const cursors = { [TOOL_BRUSH]: "crosshair", [TOOL_BUCKET]: "crosshair", [TOOL_EYEDROPPER]: "copy", [TOOL_PAN]: "grab", [TOOL_ZOOM]: "zoom-in" };
+    const cursor = panning ? "grabbing" : cursors[tool];
 
     return (
       <details className="section boxed imageEditorDiv">
         <summary className="imageEditorSummary">
           <h2>{getLocaleString("IMAGE-EDITOR/TITLE")}</h2>
-          <div className="imageEditorSubtitle">{getLocaleString("IMAGE-EDITOR/SUBTITLE")}</div>
         </summary>
+        <div className="imageEditorSubtitle">{getLocaleString("IMAGE-EDITOR/SUBTITLE")}</div>
+        <div className="imageEditorSubtitle">{getLocaleString("IMAGE-EDITOR/SHORTCUTS")}</div>
 
         <div className="editorToolbar">
           <Tooltip tooltipText={getLocaleString("IMAGE-EDITOR/COPY-FROM-PREVIEW-TT")}>
@@ -577,40 +775,46 @@ class ImageEditor extends Component {
             title={brushSwatchEntry === undefined ? undefined : `${brushSwatchEntry.blockName} (${brushSwatchEntry.toneKey})`}
             style={brushColour === null ? undefined : { backgroundColor: `rgb(${brushColour[0]}, ${brushColour[1]}, ${brushColour[2]})` }}
           />
+          <span className="editorToolbarSpacer" />
+          {toolButton(TOOL_PAN, "PAN")}
+          {toolButton(TOOL_ZOOM, "ZOOM")}
         </div>
 
         <div className="editorBody">
-          <div>
+          <div className="editorViewportColumn">
             <canvas
               className="editorCanvas"
-              width={canvasWidth}
-              height={canvasHeight}
+              width={viewSize}
+              height={viewSize}
               ref={this.canvasRef}
-              style={{
-                width: `${(editorSizeScale * canvasWidth).toString()}px`,
-                height: `${(editorSizeScale * canvasHeight).toString()}px`,
-                cursor: tool === TOOL_EYEDROPPER ? "copy" : "crosshair",
-              }}
+              style={{ width: `${viewSize.toString()}px`, height: `${viewSize.toString()}px`, cursor: cursor }}
               onMouseDown={this.onCanvasMouseDown}
-              onMouseMove={this.onCanvasMouseMove}
               onContextMenu={(e) => e.preventDefault()}
             />
-            <div className="mapResolutionAndZoom">
-              <small>{`${canvasWidth.toString()}x${canvasHeight.toString()}`}</small>
+            <div className="editorUnderCanvas">
+              <small>{`${canvasWidth.toString()}x${canvasHeight.toString()} \u00b7 ${Math.round(zoom * 100).toString()}%`}</small>
+              <div className="editorHistoryButtons">
+                <button className="editorToolButton" onClick={this.undo} disabled={undoDepth === 0} title={getLocaleString("IMAGE-EDITOR/UNDO")}>
+                  {"\u21b6"}
+                </button>
+                <button className="editorToolButton" onClick={this.redo} disabled={redoDepth === 0} title={getLocaleString("IMAGE-EDITOR/REDO")}>
+                  {"\u21b7"}
+                </button>
+              </div>
               <div>
                 <img
                   alt="+"
                   className="sizeButton"
                   src={IMG_Null}
                   style={{ backgroundImage: `url(${IMG_Textures})`, backgroundPositionX: "-96px", backgroundPositionY: "-2048px" }}
-                  onClick={() => this.changeScale(1)}
+                  onClick={() => this.changeViewSize(1)}
                 />
                 <img
                   alt="-"
                   className="sizeButton"
                   src={IMG_Null}
                   style={{ backgroundImage: `url(${IMG_Textures})`, backgroundPositionX: "-128px", backgroundPositionY: "-2048px" }}
-                  onClick={() => this.changeScale(-1)}
+                  onClick={() => this.changeViewSize(-1)}
                 />
               </div>
             </div>
@@ -635,15 +839,6 @@ class ImageEditor extends Component {
               })}
             </div>
           </div>
-        </div>
-
-        <div className="editorHistoryButtons">
-          <button className="editorToolButton" onClick={this.undo} disabled={undoDepth === 0} title={getLocaleString("IMAGE-EDITOR/UNDO")}>
-            {"\u21b6"}
-          </button>
-          <button className="editorToolButton" onClick={this.redo} disabled={redoDepth === 0} title={getLocaleString("IMAGE-EDITOR/REDO")}>
-            {"\u21b7"}
-          </button>
         </div>
 
         <div className="editorDownloads">
