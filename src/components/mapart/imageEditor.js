@@ -118,7 +118,55 @@ class ImageEditor extends Component {
         palette.push({ colourSetId, toneKey, rgb, blockName: coloursJSON[colourSetId].blocks[selectedBlocks[colourSetId]].displayName });
       }
     }
+    // Order by colour rather than by colour set id: hue first, lightness within a hue, and near-greys
+    // in their own group at the end from dark to light. Sorting on each colour set's normal tone keeps a
+    // set's dark / normal / light triple together, so with staircasing on every row of nine is three sets.
+    const hslOfSet = new Map();
+    for (const { colourSetId } of palette) {
+      if (!hslOfSet.has(colourSetId)) {
+        hslOfSet.set(colourSetId, this.rgbToHsl(coloursJSON[colourSetId].tonesRGB.normal));
+      }
+    }
+    const toneRank = { dark: 0, normal: 1, light: 2, unobtainable: 3 };
+    const sortKey = (entry) => {
+      const [h, sat, l] = hslOfSet.get(entry.colourSetId);
+      const isGrey = sat < 0.12;
+      return [isGrey ? 1 : 0, isGrey ? l : h, l, toneRank[entry.toneKey]];
+    };
+    palette.sort((a, b) => {
+      const ka = sortKey(a);
+      const kb = sortKey(b);
+      for (let k = 0; k < ka.length; k++) {
+        if (ka[k] !== kb[k]) {
+          return ka[k] - kb[k];
+        }
+      }
+      return 0;
+    });
     return palette;
+  }
+
+  rgbToHsl([r, g, b]) {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    const d = max - min;
+    if (d === 0) {
+      return [0, 0, l];
+    }
+    const sat = d / (1 - Math.abs(2 * l - 1));
+    let h;
+    if (max === r) {
+      h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+    } else if (max === g) {
+      h = ((b - r) / d + 2) * 60;
+    } else {
+      h = ((r - g) / d + 4) * 60;
+    }
+    return [h, sat, l];
   }
 
   paletteKey = (r, g, b) => (r << 16) | (g << 8) | b;
@@ -501,17 +549,17 @@ class ImageEditor extends Component {
     const canCopy = !mapPreviewWorker_inProgress && currentMaterialsData.pixelsData !== null && currentMaterialsData.pixelsData.length === 128 * optionValue_mapSize_x * 128 * optionValue_mapSize_y * 4;
 
     const toolButton = (toolId, labelKey) => (
-      <Tooltip tooltipText={getLocaleString(`IMAGE-EDITOR/${labelKey}-TT`)}>
-        <button className={`editorToolButton${tool === toolId ? " editorToolButton_active" : ""}`} onClick={() => this.setState({ tool: toolId })}>
-          {getLocaleString(`IMAGE-EDITOR/${labelKey}`)}
-        </button>
-      </Tooltip>
+      <button className={`editorToolButton${tool === toolId ? " editorToolButton_active" : ""}`} onClick={() => this.setState({ tool: toolId })}>
+        {getLocaleString(`IMAGE-EDITOR/${labelKey}`)}
+      </button>
     );
+    const brushSwatchEntry = brushKey === null ? undefined : palette.find(({ rgb }) => this.paletteKey(rgb[0], rgb[1], rgb[2]) === brushKey);
 
     return (
       <details className="section boxed imageEditorDiv">
         <summary className="imageEditorSummary">
           <h2>{getLocaleString("IMAGE-EDITOR/TITLE")}</h2>
+          <div className="imageEditorSubtitle">{getLocaleString("IMAGE-EDITOR/SUBTITLE")}</div>
         </summary>
 
         <div className="editorToolbar">
@@ -524,17 +572,11 @@ class ImageEditor extends Component {
           {toolButton(TOOL_BRUSH, "BRUSH")}
           {toolButton(TOOL_BUCKET, "BUCKET")}
           {toolButton(TOOL_EYEDROPPER, "EYEDROPPER")}
-          <span className="editorToolbarSpacer" />
-          <Tooltip tooltipText={getLocaleString("IMAGE-EDITOR/UNDO-TT")}>
-            <button className="editorToolButton" onClick={this.undo} disabled={undoDepth === 0}>
-              {getLocaleString("IMAGE-EDITOR/UNDO")}
-            </button>
-          </Tooltip>
-          <Tooltip tooltipText={getLocaleString("IMAGE-EDITOR/REDO-TT")}>
-            <button className="editorToolButton" onClick={this.redo} disabled={redoDepth === 0}>
-              {getLocaleString("IMAGE-EDITOR/REDO")}
-            </button>
-          </Tooltip>
+          <span
+            className={`editorSwatch editorActiveSwatch${brushColour === null ? " editorActiveSwatch_empty" : ""}`}
+            title={brushSwatchEntry === undefined ? undefined : `${brushSwatchEntry.blockName} (${brushSwatchEntry.toneKey})`}
+            style={brushColour === null ? undefined : { backgroundColor: `rgb(${brushColour[0]}, ${brushColour[1]}, ${brushColour[2]})` }}
+          />
         </div>
 
         <div className="editorBody">
@@ -556,30 +598,28 @@ class ImageEditor extends Component {
             <div className="mapResolutionAndZoom">
               <small>{`${canvasWidth.toString()}x${canvasHeight.toString()}`}</small>
               <div>
-                <Tooltip tooltipText={getLocaleString("MAP-PREVIEW/SCALE-PLUS-TT")}>
-                  <img
-                    alt="+"
-                    className="sizeButton"
-                    src={IMG_Null}
-                    style={{ backgroundImage: `url(${IMG_Textures})`, backgroundPositionX: "-96px", backgroundPositionY: "-2048px" }}
-                    onClick={() => this.changeScale(1)}
-                  />
-                </Tooltip>
-                <Tooltip tooltipText={getLocaleString("MAP-PREVIEW/SCALE-MINUS-TT")}>
-                  <img
-                    alt="-"
-                    className="sizeButton"
-                    src={IMG_Null}
-                    style={{ backgroundImage: `url(${IMG_Textures})`, backgroundPositionX: "-128px", backgroundPositionY: "-2048px" }}
-                    onClick={() => this.changeScale(-1)}
-                  />
-                </Tooltip>
+                <img
+                  alt="+"
+                  className="sizeButton"
+                  src={IMG_Null}
+                  style={{ backgroundImage: `url(${IMG_Textures})`, backgroundPositionX: "-96px", backgroundPositionY: "-2048px" }}
+                  onClick={() => this.changeScale(1)}
+                />
+                <img
+                  alt="-"
+                  className="sizeButton"
+                  src={IMG_Null}
+                  style={{ backgroundImage: `url(${IMG_Textures})`, backgroundPositionX: "-128px", backgroundPositionY: "-2048px" }}
+                  onClick={() => this.changeScale(-1)}
+                />
               </div>
             </div>
           </div>
 
           <div className="editorPaletteColumn">
-            <b>{getLocaleString("IMAGE-EDITOR/PALETTE")}</b>
+            <div>
+              <b>{getLocaleString("IMAGE-EDITOR/PALETTE")}</b> <small className="editorPaletteNote">{getLocaleString("IMAGE-EDITOR/PALETTE-NOTE")}</small>
+            </div>
             <div className="editorPalette">
               {palette.map(({ colourSetId, toneKey, rgb, blockName }) => {
                 const key = this.paletteKey(rgb[0], rgb[1], rgb[2]);
@@ -594,21 +634,22 @@ class ImageEditor extends Component {
                 );
               })}
             </div>
-            {brushColour !== null && (
-              <div className="editorBrushColour">
-                <span className="editorSwatch" style={{ backgroundColor: `rgb(${brushColour[0]}, ${brushColour[1]}, ${brushColour[2]})` }} />
-                <small>{`rgb(${brushColour[0]}, ${brushColour[1]}, ${brushColour[2]})`}</small>
-              </div>
-            )}
           </div>
+        </div>
+
+        <div className="editorHistoryButtons">
+          <button className="editorToolButton" onClick={this.undo} disabled={undoDepth === 0} title={getLocaleString("IMAGE-EDITOR/UNDO")}>
+            {"\u21b6"}
+          </button>
+          <button className="editorToolButton" onClick={this.redo} disabled={redoDepth === 0} title={getLocaleString("IMAGE-EDITOR/REDO")}>
+            {"\u21b7"}
+          </button>
         </div>
 
         <div className="editorDownloads">
           <b>{getLocaleString("IMAGE-EDITOR/DOWNLOAD-EDITED")}</b>
           {pixelsOutsidePalette > 0 && (
-            <Tooltip tooltipText={getLocaleString("IMAGE-EDITOR/OUTSIDE-PALETTE-TT")}>
-              <small className="editorWarning">{`${pixelsOutsidePalette.toString()} ${getLocaleString("IMAGE-EDITOR/OUTSIDE-PALETTE")}`}</small>
-            </Tooltip>
+            <small className="editorWarning">{`${pixelsOutsidePalette.toString()} ${getLocaleString("IMAGE-EDITOR/OUTSIDE-PALETTE")}`}</small>
           )}
           <GreenButtons
             {...this.props}

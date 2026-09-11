@@ -1,13 +1,15 @@
-.imageEditorDiv {
-  max-width: 100%;
-}
-
 .imageEditorSummary {
   cursor: pointer;
 }
 
 .imageEditorSummary h2 {
   display: inline;
+}
+
+.imageEditorSubtitle {
+  font-size: 0.85em;
+  opacity: 0.8;
+  margin-left: 1.1em; /* clear the disclosure triangle so it lines up under the title text */
 }
 
 .editorToolbar {
@@ -88,11 +90,30 @@
   outline: 0.15em solid var(--rebaneGreen);
 }
 
-.editorBrushColour {
+.editorActiveSwatch {
+  cursor: default;
+  margin-left: 0.3em;
+}
+
+.editorActiveSwatch_empty {
+  background: repeating-linear-gradient(45deg, #444 0 4px, #333 4px 8px);
+}
+
+.editorPaletteNote {
+  opacity: 0.8;
+}
+
+.editorHistoryButtons {
   display: flex;
   flex-direction: row;
-  align-items: center;
-  column-gap: 0.4em;
+  column-gap: 0.3em;
+  margin-top: 0.5em;
+}
+
+.editorHistoryButtons .editorToolButton {
+  font-size: 1.1em;
+  line-height: 1;
+  padding: 0.1em 0.5em;
 }
 
 .editorDownloads {

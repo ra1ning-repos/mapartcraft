@@ -1,66 +1,93 @@
-.mapartController {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  row-gap: 0.6em;
-}
+/* The page body is laid out in one of two ways, chosen in MapartController.chooseLayout() by measuring
+   natural widths:
 
-/* Block selection sits on its own row above these two, and materials on its own row below,
-   so this row only has to lay out the settings column and the preview side by side.
-   Settings comes first so it stays hard left; flex-wrap plus flex-shrink: 0 on the children
-   means the preview drops beneath settings once the two no longer fit across the available
-   width, rather than either of them being squeezed. */
-.sectionsSettingsAndPreview {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  align-items: flex-start;
+   two-column (default while it fits)      stacked (when preview / editor are too wide)
+   +----------+------------------------+   +----------+
+   | settings |                        |   | settings |
+   | buttons  |    preview             |   +----------+
+   +----------+                        |   +----------------------------------+
+   | blocks   |    image editor        |   |    preview                       |
+   +----------+                        |   |    image editor                  |
+   | materials|                        |   +----------------------------------+
+   +----------+------------------------+   | blocks   |
+                                           +----------+
+                                           | materials|
+                                           +----------+
+   Every box keeps its natural (content) width in both modes, so the measurement that picks the mode is
+   the same whichever mode is currently showing. */
+
+.mapartController_twoColumn {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
   column-gap: 0.6em;
   row-gap: 0.6em;
+  align-items: start;
 }
 
-.sectionsSettingsAndPreview > * {
-  flex-shrink: 0;
-  max-width: 100%;
+.mapartController_twoColumn > .sectionSettingsAndButtons {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.mapartController_twoColumn > .sectionBlocksAndMaterials {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.mapartController_twoColumn > .sectionPreviewArea {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.mapartController_stacked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  row-gap: 0.6em;
+}
+
+.mapartController_stacked > .sectionPreviewArea {
+  align-self: stretch;
 }
 
 .sectionSettingsAndButtons {
   display: block;
+  width: max-content;
 }
 
-/* Takes whatever width the settings column leaves on the row and centres the preview inside it.
-   flex-basis stays auto (the preview's own width), so the wrap rule above is unchanged: the area
-   only drops below settings once the preview itself no longer fits beside them. */
+/* Block selection stacked over materials, each hugging its own content */
+.sectionBlocksAndMaterials {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  row-gap: 0.6em;
+}
+
+/* Centres the preview / editor column in whatever width it is given */
 .sectionPreviewArea {
-  flex: 1 0 auto;
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  min-width: 0;
 }
 
-/* The preview with the image editor stacked beneath it, both centred in the preview area */
+/* The preview with the image editor stacked beneath it. flex-shrink: 0 keeps its measured width honest
+   even while it is (briefly) too wide for its column, which is exactly when chooseLayout needs to know. */
 .previewAndEditor {
   display: flex;
   flex-direction: column;
   align-items: center;
   row-gap: 0.6em;
-  max-width: 100%;
+  flex-shrink: 0;
 }
 
 .section {
   padding: 0.3em;
 }
 
-/* Same panel treatment as the site header, for settings, block selection and materials */
+/* Same panel treatment as the site header, for settings, block selection, materials and the editor */
 .boxed {
   background-color: var(--headerBackground);
   padding: 0.4em 0.6em 0.5em 0.6em;
-}
-
-/* The column stretches its rows edge to edge so the settings/preview row can share out the width,
-   but these two panels sit in the column on their own and should hug their content instead. */
-.blockSelectionDiv,
-.materialsDiv {
-  align-self: flex-start;
 }

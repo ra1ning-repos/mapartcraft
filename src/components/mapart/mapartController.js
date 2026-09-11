@@ -71,6 +71,7 @@ class MapartController extends Component {
       currentSelectedBlocks: {}, // we keep this soley for materials.js
     },
     mapPreviewWorker_inProgress: false,
+    twoColumnLayout: true, // false once the preview/editor column no longer fits beside the settings column
   };
 
   constructor(props) {
@@ -194,13 +195,57 @@ class MapartController extends Component {
     document.addEventListener("drop", this.eventListener_drop);
 
     document.addEventListener("paste", this.eventListener_paste);
+
+    // Watch the widths that decide the page layout (see chooseLayout).
+    if (typeof ResizeObserver !== "undefined") {
+      this.layoutObserver = new ResizeObserver(this.chooseLayout);
+      for (const ref of [this.layoutRef, this.leftTopRef, this.leftBottomRef, this.rightColumnRef]) {
+        if (ref.current !== null) {
+          this.layoutObserver.observe(ref.current);
+        }
+      }
+    } else {
+      window.addEventListener("resize", this.chooseLayout);
+    }
+    this.chooseLayout();
   }
 
   componentWillUnmount() {
     document.removeEventListener("dragover", this.eventListener_dragover);
     document.removeEventListener("drop", this.eventListener_drop);
     document.removeEventListener("paste", this.eventListener_paste);
+    if (this.layoutObserver) {
+      this.layoutObserver.disconnect();
+    } else {
+      window.removeEventListener("resize", this.chooseLayout);
+    }
   }
+
+  layoutRef = React.createRef();
+  leftTopRef = React.createRef(); // settings + download buttons
+  leftBottomRef = React.createRef(); // block selection + materials
+  rightColumnRef = React.createRef(); // map preview + image editor
+  layoutObserver = null;
+
+  // Two columns (settings / block selection / materials on the left, preview / editor on the right) while
+  // the right column's natural width fits beside the widest left panel; otherwise everything stacks, with
+  // the preview and editor slotted between settings and block selection. Every measured box keeps its
+  // natural width in both modes, so the decision cannot flip-flop.
+  chooseLayout = () => {
+    const container = this.layoutRef.current;
+    const leftTop = this.leftTopRef.current;
+    const leftBottom = this.leftBottomRef.current;
+    const right = this.rightColumnRef.current;
+    if (container === null || leftTop === null || leftBottom === null || right === null) {
+      return;
+    }
+    const gap = 12;
+    const leftWidth = Math.max(leftTop.offsetWidth, leftBottom.offsetWidth);
+    const fits = leftWidth + gap + right.offsetWidth <= container.clientWidth;
+    if (fits !== this.state.twoColumnLayout) {
+      this.setState({ twoColumnLayout: fits });
+    }
+  };
 
   onFileDialogEvent = (e) => {
     const files = e.target.files;
@@ -861,86 +906,170 @@ class MapartController extends Component {
       selectedPresetName,
       currentMaterialsData,
       mapPreviewWorker_inProgress,
+      twoColumnLayout,
     } = this.state;
     return (
-      <div className="mapartController">
-        <div className="sectionsSettingsAndPreview">
-          <div className="sectionSettingsAndButtons">
-            <MapSettings
-              getLocaleString={getLocaleString}
-              coloursJSON={coloursJSON}
-              optionValue_version={optionValue_version}
-              onOptionChange_version={this.onOptionChange_version}
-              optionValue_modeNBTOrMapdat={optionValue_modeNBTOrMapdat}
-              onOptionChange_modeNBTOrMapdat={this.onOptionChange_modeNBTOrMapdat}
-              optionValue_mapSize_x={optionValue_mapSize_x}
-              onOptionChange_mapSize_x={this.onOptionChange_mapSize_x}
-              optionValue_mapSize_y={optionValue_mapSize_y}
-              onOptionChange_mapSize_y={this.onOptionChange_mapSize_y}
-              optionValue_cropImage={optionValue_cropImage}
-              onOptionChange_cropImage={this.onOptionChange_cropImage}
-              optionValue_cropImage_zoom={optionValue_cropImage_zoom}
-              onOptionChange_cropImage_zoom={this.onOptionChange_cropImage_zoom}
-              optionValue_cropImage_percent_x={optionValue_cropImage_percent_x}
-              onOptionChange_cropImage_percent_x={this.onOptionChange_cropImage_percent_x}
-              optionValue_cropImage_percent_y={optionValue_cropImage_percent_y}
-              onOptionChange_cropImage_percent_y={this.onOptionChange_cropImage_percent_y}
-              optionValue_showGridOverlay={optionValue_showGridOverlay}
-              onOptionChange_showGridOverlay={this.onOptionChange_showGridOverlay}
-              optionValue_staircasing={optionValue_staircasing}
-              onOptionChange_staircasing={this.onOptionChange_staircasing}
-              optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
-              onOptionChange_WhereSupportBlocks={this.onOptionChange_WhereSupportBlocks}
-              optionValue_supportBlock={optionValue_supportBlock}
-              setOption_SupportBlock={this.setOption_SupportBlock}
-              optionValue_transparency={optionValue_transparency}
-              onOptionChange_transparency={this.onOptionChange_transparency}
-              optionValue_transparencyTolerance={optionValue_transparencyTolerance}
-              onOptionChange_transparencyTolerance={this.onOptionChange_transparencyTolerance}
-              optionValue_mapdatFilenameUseId={optionValue_mapdatFilenameUseId}
-              onOptionChange_mapdatFilenameUseId={this.onOptionChange_mapdatFilenameUseId}
-              optionValue_mapdatFilenameIdStart={optionValue_mapdatFilenameIdStart}
-              onOptionChange_mapdatFilenameIdStart={this.onOptionChange_mapdatFilenameIdStart}
-              optionValue_betterColour={optionValue_betterColour}
-              onOptionChange_BetterColour={this.onOptionChange_BetterColour}
-              optionValue_dithering={optionValue_dithering}
-              onOptionChange_dithering={this.onOptionChange_dithering}
-              optionValue_dithering_propagation_red={optionValue_dithering_propagation_red}
-              onOptionChange_dithering_propagation_red={this.onOptionChange_dithering_propagation_red}
-              optionValue_dithering_propagation_green={optionValue_dithering_propagation_green}
-              onOptionChange_dithering_propagation_green={this.onOptionChange_dithering_propagation_green}
-              optionValue_dithering_propagation_blue={optionValue_dithering_propagation_blue}
-              onOptionChange_dithering_propagation_blue={this.onOptionChange_dithering_propagation_blue}
-              optionValue_dithering_boustrophedon={optionValue_dithering_boustrophedon}
-              onOptionChange_dithering_boustrophedon={this.onOptionChange_dithering_boustrophedon}
-              optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
-              onOptionChange_PreProcessingEnabled={this.onOptionChange_PreProcessingEnabled}
-              preProcessingValue_brightness={preProcessingValue_brightness}
-              onOptionChange_PreProcessingBrightness={this.onOptionChange_PreProcessingBrightness}
-              preProcessingValue_contrast={preProcessingValue_contrast}
-              onOptionChange_PreProcessingContrast={this.onOptionChange_PreProcessingContrast}
-              preProcessingValue_saturation={preProcessingValue_saturation}
-              onOptionChange_PreProcessingSaturation={this.onOptionChange_PreProcessingSaturation}
-              preProcessingValue_blackPoint={preProcessingValue_blackPoint}
-              onOptionChange_PreProcessingBlackPoint={this.onOptionChange_PreProcessingBlackPoint}
-              preProcessingValue_whitePoint={preProcessingValue_whitePoint}
-              onOptionChange_PreProcessingWhitePoint={this.onOptionChange_PreProcessingWhitePoint}
-              preProcessingValue_gamma={preProcessingValue_gamma}
-              onOptionChange_PreProcessingGamma={this.onOptionChange_PreProcessingGamma}
-              preProcessingValue_sharpness={preProcessingValue_sharpness}
-              onOptionChange_PreProcessingSharpness={this.onOptionChange_PreProcessingSharpness}
-              preProcessingValue_backgroundColourSelect={preProcessingValue_backgroundColourSelect}
-              onOptionChange_PreProcessingBackgroundColourSelect={this.onOptionChange_PreProcessingBackgroundColourSelect}
-              preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
-              onOptionChange_PreProcessingBackgroundColour={this.onOptionChange_PreProcessingBackgroundColour}
-              onOptionChange_PreProcessingResetAll={this.onOptionChange_PreProcessingResetAll}
-              optionValue_extras_moreStaircasingOptions={optionValue_extras_moreStaircasingOptions}
-              onOptionChange_extras_moreStaircasingOptions={this.onOptionChange_extras_moreStaircasingOptions}
-            />
-            <GreenButtons
+      <div className={`mapartController ${twoColumnLayout ? "mapartController_twoColumn" : "mapartController_stacked"}`} ref={this.layoutRef}>
+        <div className="sectionSettingsAndButtons" ref={this.leftTopRef}>
+          <MapSettings
+            getLocaleString={getLocaleString}
+            coloursJSON={coloursJSON}
+            optionValue_version={optionValue_version}
+            onOptionChange_version={this.onOptionChange_version}
+            optionValue_modeNBTOrMapdat={optionValue_modeNBTOrMapdat}
+            onOptionChange_modeNBTOrMapdat={this.onOptionChange_modeNBTOrMapdat}
+            optionValue_mapSize_x={optionValue_mapSize_x}
+            onOptionChange_mapSize_x={this.onOptionChange_mapSize_x}
+            optionValue_mapSize_y={optionValue_mapSize_y}
+            onOptionChange_mapSize_y={this.onOptionChange_mapSize_y}
+            optionValue_cropImage={optionValue_cropImage}
+            onOptionChange_cropImage={this.onOptionChange_cropImage}
+            optionValue_cropImage_zoom={optionValue_cropImage_zoom}
+            onOptionChange_cropImage_zoom={this.onOptionChange_cropImage_zoom}
+            optionValue_cropImage_percent_x={optionValue_cropImage_percent_x}
+            onOptionChange_cropImage_percent_x={this.onOptionChange_cropImage_percent_x}
+            optionValue_cropImage_percent_y={optionValue_cropImage_percent_y}
+            onOptionChange_cropImage_percent_y={this.onOptionChange_cropImage_percent_y}
+            optionValue_showGridOverlay={optionValue_showGridOverlay}
+            onOptionChange_showGridOverlay={this.onOptionChange_showGridOverlay}
+            optionValue_staircasing={optionValue_staircasing}
+            onOptionChange_staircasing={this.onOptionChange_staircasing}
+            optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
+            onOptionChange_WhereSupportBlocks={this.onOptionChange_WhereSupportBlocks}
+            optionValue_supportBlock={optionValue_supportBlock}
+            setOption_SupportBlock={this.setOption_SupportBlock}
+            optionValue_transparency={optionValue_transparency}
+            onOptionChange_transparency={this.onOptionChange_transparency}
+            optionValue_transparencyTolerance={optionValue_transparencyTolerance}
+            onOptionChange_transparencyTolerance={this.onOptionChange_transparencyTolerance}
+            optionValue_mapdatFilenameUseId={optionValue_mapdatFilenameUseId}
+            onOptionChange_mapdatFilenameUseId={this.onOptionChange_mapdatFilenameUseId}
+            optionValue_mapdatFilenameIdStart={optionValue_mapdatFilenameIdStart}
+            onOptionChange_mapdatFilenameIdStart={this.onOptionChange_mapdatFilenameIdStart}
+            optionValue_betterColour={optionValue_betterColour}
+            onOptionChange_BetterColour={this.onOptionChange_BetterColour}
+            optionValue_dithering={optionValue_dithering}
+            onOptionChange_dithering={this.onOptionChange_dithering}
+            optionValue_dithering_propagation_red={optionValue_dithering_propagation_red}
+            onOptionChange_dithering_propagation_red={this.onOptionChange_dithering_propagation_red}
+            optionValue_dithering_propagation_green={optionValue_dithering_propagation_green}
+            onOptionChange_dithering_propagation_green={this.onOptionChange_dithering_propagation_green}
+            optionValue_dithering_propagation_blue={optionValue_dithering_propagation_blue}
+            onOptionChange_dithering_propagation_blue={this.onOptionChange_dithering_propagation_blue}
+            optionValue_dithering_boustrophedon={optionValue_dithering_boustrophedon}
+            onOptionChange_dithering_boustrophedon={this.onOptionChange_dithering_boustrophedon}
+            optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
+            onOptionChange_PreProcessingEnabled={this.onOptionChange_PreProcessingEnabled}
+            preProcessingValue_brightness={preProcessingValue_brightness}
+            onOptionChange_PreProcessingBrightness={this.onOptionChange_PreProcessingBrightness}
+            preProcessingValue_contrast={preProcessingValue_contrast}
+            onOptionChange_PreProcessingContrast={this.onOptionChange_PreProcessingContrast}
+            preProcessingValue_saturation={preProcessingValue_saturation}
+            onOptionChange_PreProcessingSaturation={this.onOptionChange_PreProcessingSaturation}
+            preProcessingValue_blackPoint={preProcessingValue_blackPoint}
+            onOptionChange_PreProcessingBlackPoint={this.onOptionChange_PreProcessingBlackPoint}
+            preProcessingValue_whitePoint={preProcessingValue_whitePoint}
+            onOptionChange_PreProcessingWhitePoint={this.onOptionChange_PreProcessingWhitePoint}
+            preProcessingValue_gamma={preProcessingValue_gamma}
+            onOptionChange_PreProcessingGamma={this.onOptionChange_PreProcessingGamma}
+            preProcessingValue_sharpness={preProcessingValue_sharpness}
+            onOptionChange_PreProcessingSharpness={this.onOptionChange_PreProcessingSharpness}
+            preProcessingValue_backgroundColourSelect={preProcessingValue_backgroundColourSelect}
+            onOptionChange_PreProcessingBackgroundColourSelect={this.onOptionChange_PreProcessingBackgroundColourSelect}
+            preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
+            onOptionChange_PreProcessingBackgroundColour={this.onOptionChange_PreProcessingBackgroundColour}
+            onOptionChange_PreProcessingResetAll={this.onOptionChange_PreProcessingResetAll}
+            optionValue_extras_moreStaircasingOptions={optionValue_extras_moreStaircasingOptions}
+            onOptionChange_extras_moreStaircasingOptions={this.onOptionChange_extras_moreStaircasingOptions}
+          />
+          <GreenButtons
+            getLocaleString={getLocaleString}
+            coloursJSON={coloursJSON}
+            selectedBlocks={selectedBlocks}
+            optionValue_version={optionValue_version}
+            optionValue_modeNBTOrMapdat={optionValue_modeNBTOrMapdat}
+            optionValue_mapSize_x={optionValue_mapSize_x}
+            optionValue_mapSize_y={optionValue_mapSize_y}
+            optionValue_cropImage={optionValue_cropImage}
+            optionValue_cropImage_zoom={optionValue_cropImage_zoom}
+            optionValue_cropImage_percent_x={optionValue_cropImage_percent_x}
+            optionValue_cropImage_percent_y={optionValue_cropImage_percent_y}
+            optionValue_staircasing={optionValue_staircasing}
+            optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
+            optionValue_supportBlock={optionValue_supportBlock}
+            optionValue_transparency={optionValue_transparency}
+            optionValue_transparencyTolerance={optionValue_transparencyTolerance}
+            optionValue_mapdatFilenameUseId={optionValue_mapdatFilenameUseId}
+            optionValue_mapdatFilenameIdStart={optionValue_mapdatFilenameIdStart}
+            optionValue_betterColour={optionValue_betterColour}
+            optionValue_dithering={optionValue_dithering}
+            optionValue_dithering_propagation_red={optionValue_dithering_propagation_red}
+            optionValue_dithering_propagation_green={optionValue_dithering_propagation_green}
+            optionValue_dithering_propagation_blue={optionValue_dithering_propagation_blue}
+            optionValue_dithering_boustrophedon={optionValue_dithering_boustrophedon}
+            optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
+            preProcessingValue_brightness={preProcessingValue_brightness}
+            preProcessingValue_contrast={preProcessingValue_contrast}
+            preProcessingValue_saturation={preProcessingValue_saturation}
+            preProcessingValue_blackPoint={preProcessingValue_blackPoint}
+            preProcessingValue_whitePoint={preProcessingValue_whitePoint}
+            preProcessingValue_gamma={preProcessingValue_gamma}
+            preProcessingValue_sharpness={preProcessingValue_sharpness}
+            preProcessingValue_backgroundColourSelect={preProcessingValue_backgroundColourSelect}
+            preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
+            uploadedImage={uploadedImage}
+            uploadedImage_baseFilename={uploadedImage_baseFilename}
+            currentMaterialsData={currentMaterialsData}
+            mapPreviewWorker_inProgress={mapPreviewWorker_inProgress}
+            downloadBlobFile={this.downloadBlobFile}
+          />
+        </div>
+        <div className="sectionPreviewArea">
+          <div className="previewAndEditor" ref={this.rightColumnRef}>
+            <MapPreview
               getLocaleString={getLocaleString}
               coloursJSON={coloursJSON}
               selectedBlocks={selectedBlocks}
+              disabledTones={disabledTones}
+              optionValue_version={optionValue_version}
+              optionValue_modeNBTOrMapdat={optionValue_modeNBTOrMapdat}
+              optionValue_mapSize_x={optionValue_mapSize_x}
+              optionValue_mapSize_y={optionValue_mapSize_y}
+              optionValue_cropImage={optionValue_cropImage}
+              optionValue_cropImage_zoom={optionValue_cropImage_zoom}
+              optionValue_cropImage_percent_x={optionValue_cropImage_percent_x}
+              optionValue_cropImage_percent_y={optionValue_cropImage_percent_y}
+              optionValue_showGridOverlay={optionValue_showGridOverlay}
+              optionValue_staircasing={optionValue_staircasing}
+              optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
+              optionValue_transparency={optionValue_transparency}
+              optionValue_transparencyTolerance={optionValue_transparencyTolerance}
+              optionValue_betterColour={optionValue_betterColour}
+              optionValue_dithering={optionValue_dithering}
+              optionValue_dithering_propagation_red={optionValue_dithering_propagation_red}
+              optionValue_dithering_propagation_green={optionValue_dithering_propagation_green}
+              optionValue_dithering_propagation_blue={optionValue_dithering_propagation_blue}
+              optionValue_dithering_boustrophedon={optionValue_dithering_boustrophedon}
+              optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
+              preProcessingValue_brightness={preProcessingValue_brightness}
+              preProcessingValue_contrast={preProcessingValue_contrast}
+              preProcessingValue_saturation={preProcessingValue_saturation}
+              preProcessingValue_blackPoint={preProcessingValue_blackPoint}
+              preProcessingValue_whitePoint={preProcessingValue_whitePoint}
+              preProcessingValue_gamma={preProcessingValue_gamma}
+              preProcessingValue_sharpness={preProcessingValue_sharpness}
+              preProcessingValue_backgroundColourSelect={preProcessingValue_backgroundColourSelect}
+              preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
+              uploadedImage={uploadedImage}
+              onFileDialogEvent={this.onFileDialogEvent}
+              onGetMapMaterials={this.handleSetMapMaterials}
+              onMapPreviewWorker_begin={this.onMapPreviewWorker_begin}
+            />
+            <ImageEditor
+              getLocaleString={getLocaleString}
+              coloursJSON={coloursJSON}
+              selectedBlocks={selectedBlocks}
+              disabledTones={disabledTones}
               optionValue_version={optionValue_version}
               optionValue_modeNBTOrMapdat={optionValue_modeNBTOrMapdat}
               optionValue_mapSize_x={optionValue_mapSize_x}
@@ -979,123 +1108,40 @@ class MapartController extends Component {
               downloadBlobFile={this.downloadBlobFile}
             />
           </div>
-          <div className="sectionPreviewArea">
-            <div className="previewAndEditor">
-              <MapPreview
-                getLocaleString={getLocaleString}
-                coloursJSON={coloursJSON}
-                selectedBlocks={selectedBlocks}
-                disabledTones={disabledTones}
-                optionValue_version={optionValue_version}
-                optionValue_modeNBTOrMapdat={optionValue_modeNBTOrMapdat}
-                optionValue_mapSize_x={optionValue_mapSize_x}
-                optionValue_mapSize_y={optionValue_mapSize_y}
-                optionValue_cropImage={optionValue_cropImage}
-                optionValue_cropImage_zoom={optionValue_cropImage_zoom}
-                optionValue_cropImage_percent_x={optionValue_cropImage_percent_x}
-                optionValue_cropImage_percent_y={optionValue_cropImage_percent_y}
-                optionValue_showGridOverlay={optionValue_showGridOverlay}
-                optionValue_staircasing={optionValue_staircasing}
-                optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
-                optionValue_transparency={optionValue_transparency}
-                optionValue_transparencyTolerance={optionValue_transparencyTolerance}
-                optionValue_betterColour={optionValue_betterColour}
-                optionValue_dithering={optionValue_dithering}
-                optionValue_dithering_propagation_red={optionValue_dithering_propagation_red}
-                optionValue_dithering_propagation_green={optionValue_dithering_propagation_green}
-                optionValue_dithering_propagation_blue={optionValue_dithering_propagation_blue}
-                optionValue_dithering_boustrophedon={optionValue_dithering_boustrophedon}
-                optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
-                preProcessingValue_brightness={preProcessingValue_brightness}
-                preProcessingValue_contrast={preProcessingValue_contrast}
-                preProcessingValue_saturation={preProcessingValue_saturation}
-                preProcessingValue_blackPoint={preProcessingValue_blackPoint}
-                preProcessingValue_whitePoint={preProcessingValue_whitePoint}
-                preProcessingValue_gamma={preProcessingValue_gamma}
-                preProcessingValue_sharpness={preProcessingValue_sharpness}
-                preProcessingValue_backgroundColourSelect={preProcessingValue_backgroundColourSelect}
-                preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
-                uploadedImage={uploadedImage}
-                onFileDialogEvent={this.onFileDialogEvent}
-                onGetMapMaterials={this.handleSetMapMaterials}
-                onMapPreviewWorker_begin={this.onMapPreviewWorker_begin}
-              />
-              <ImageEditor
-                getLocaleString={getLocaleString}
-                coloursJSON={coloursJSON}
-                selectedBlocks={selectedBlocks}
-                disabledTones={disabledTones}
-                optionValue_version={optionValue_version}
-                optionValue_modeNBTOrMapdat={optionValue_modeNBTOrMapdat}
-                optionValue_mapSize_x={optionValue_mapSize_x}
-                optionValue_mapSize_y={optionValue_mapSize_y}
-                optionValue_cropImage={optionValue_cropImage}
-                optionValue_cropImage_zoom={optionValue_cropImage_zoom}
-                optionValue_cropImage_percent_x={optionValue_cropImage_percent_x}
-                optionValue_cropImage_percent_y={optionValue_cropImage_percent_y}
-                optionValue_staircasing={optionValue_staircasing}
-                optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
-                optionValue_supportBlock={optionValue_supportBlock}
-                optionValue_transparency={optionValue_transparency}
-                optionValue_transparencyTolerance={optionValue_transparencyTolerance}
-                optionValue_mapdatFilenameUseId={optionValue_mapdatFilenameUseId}
-                optionValue_mapdatFilenameIdStart={optionValue_mapdatFilenameIdStart}
-                optionValue_betterColour={optionValue_betterColour}
-                optionValue_dithering={optionValue_dithering}
-                optionValue_dithering_propagation_red={optionValue_dithering_propagation_red}
-                optionValue_dithering_propagation_green={optionValue_dithering_propagation_green}
-                optionValue_dithering_propagation_blue={optionValue_dithering_propagation_blue}
-                optionValue_dithering_boustrophedon={optionValue_dithering_boustrophedon}
-                optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
-                preProcessingValue_brightness={preProcessingValue_brightness}
-                preProcessingValue_contrast={preProcessingValue_contrast}
-                preProcessingValue_saturation={preProcessingValue_saturation}
-                preProcessingValue_blackPoint={preProcessingValue_blackPoint}
-                preProcessingValue_whitePoint={preProcessingValue_whitePoint}
-                preProcessingValue_gamma={preProcessingValue_gamma}
-                preProcessingValue_sharpness={preProcessingValue_sharpness}
-                preProcessingValue_backgroundColourSelect={preProcessingValue_backgroundColourSelect}
-                preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
-                uploadedImage={uploadedImage}
-                uploadedImage_baseFilename={uploadedImage_baseFilename}
-                currentMaterialsData={currentMaterialsData}
-                mapPreviewWorker_inProgress={mapPreviewWorker_inProgress}
-                downloadBlobFile={this.downloadBlobFile}
-              />
-            </div>
-          </div>
         </div>
-        <BlockSelection
-          getLocaleString={getLocaleString}
-          coloursJSON={coloursJSON}
-          disabledTones={disabledTones}
-          onChangeColourSetBlock={this.handleChangeColourSetBlock}
-          onToggleColourTone={this.handleToggleColourTone}
-          optionValue_version={optionValue_version}
-          optionValue_modeNBTOrMapdat={optionValue_modeNBTOrMapdat}
-          optionValue_staircasing={optionValue_staircasing}
-          selectedBlocks={selectedBlocks}
-          presets={presets}
-          selectedPresetName={selectedPresetName}
-          canDeletePreset={this.canDeletePreset}
-          onPresetChange={this.handlePresetChange}
-          onDeletePreset={this.handleDeletePreset}
-          onSavePreset={this.handleSavePreset}
-          onSharePreset={this.handleSharePreset}
-          onGetPDNPaletteClicked={this.handleGetPDNPaletteClicked}
-          handleAddCustomBlock={this.handleAddCustomBlock}
-          handleDeleteCustomBlock={this.handleDeleteCustomBlock}
-        />
-        {optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId ? (
-          <Materials
+        <div className="sectionBlocksAndMaterials" ref={this.leftBottomRef}>
+          <BlockSelection
             getLocaleString={getLocaleString}
             coloursJSON={coloursJSON}
-            optionValue_version={optionValue_version}
-            optionValue_supportBlock={optionValue_supportBlock}
-            currentMaterialsData={currentMaterialsData}
+            disabledTones={disabledTones}
             onChangeColourSetBlock={this.handleChangeColourSetBlock}
+            onToggleColourTone={this.handleToggleColourTone}
+            optionValue_version={optionValue_version}
+            optionValue_modeNBTOrMapdat={optionValue_modeNBTOrMapdat}
+            optionValue_staircasing={optionValue_staircasing}
+            selectedBlocks={selectedBlocks}
+            presets={presets}
+            selectedPresetName={selectedPresetName}
+            canDeletePreset={this.canDeletePreset}
+            onPresetChange={this.handlePresetChange}
+            onDeletePreset={this.handleDeletePreset}
+            onSavePreset={this.handleSavePreset}
+            onSharePreset={this.handleSharePreset}
+            onGetPDNPaletteClicked={this.handleGetPDNPaletteClicked}
+            handleAddCustomBlock={this.handleAddCustomBlock}
+            handleDeleteCustomBlock={this.handleDeleteCustomBlock}
           />
-        ) : null}
+          {optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId ? (
+            <Materials
+              getLocaleString={getLocaleString}
+              coloursJSON={coloursJSON}
+              optionValue_version={optionValue_version}
+              optionValue_supportBlock={optionValue_supportBlock}
+              currentMaterialsData={currentMaterialsData}
+              onChangeColourSetBlock={this.handleChangeColourSetBlock}
+            />
+          ) : null}
+        </div>
       </div>
     );
   }
