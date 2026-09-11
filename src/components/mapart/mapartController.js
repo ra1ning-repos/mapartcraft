@@ -7,8 +7,6 @@ import MapPreview from "./mapPreview";
 import MapSettings from "./mapSettings";
 import Materials from "./materials";
 import coloursJSON from "./json/coloursJSON.json";
-import ViewOnline2D from "./viewOnline2D/viewOnline2D";
-import ViewOnline3D from "./viewOnline3D/viewOnline3D";
 
 import BackgroundColourModes from "./json/backgroundColourModes.json";
 import ColourMethods from "./json/colourMethods.json";
@@ -46,7 +44,7 @@ class MapartController extends Component {
     optionValue_mapdatFilenameUseId: true,
     optionValue_mapdatFilenameIdStart: 0,
     optionValue_betterColour: ColourMethods.Cie76_Lab50.uniqueId,
-    optionValue_dithering: DitherMethods.FloydSteinberg.uniqueId,
+    optionValue_dithering: DitherMethods.FloydSteinberg_24.uniqueId,
     optionValue_dithering_propagation_red: SettingDefaults.optionValue_dithering_propagation_red,
     optionValue_dithering_propagation_green: SettingDefaults.optionValue_dithering_propagation_green,
     optionValue_dithering_propagation_blue: SettingDefaults.optionValue_dithering_propagation_blue,
@@ -65,15 +63,13 @@ class MapartController extends Component {
     uploadedImage: null,
     uploadedImage_baseFilename: null,
     presets: [],
-    selectedPresetName: "None",
+    selectedPresetName: "", // set in the constructor; "" means the current selection matches no saved preset
     currentMaterialsData: {
       pixelsData: null,
       maps: [[]], // entries are dictionaries with keys "materials", "supportBlockCount"
       currentSelectedBlocks: {}, // we keep this soley for materials.js
     },
     mapPreviewWorker_inProgress: false,
-    viewOnline_NBT: null,
-    viewOnline_3D: false,
   };
 
   constructor(props) {
@@ -109,13 +105,48 @@ class MapartController extends Component {
       this.state.optionValue_version = supportedVersionFound;
     }
 
+    // Start with every block selected rather than an empty selection.
+    const startingPreset = this.getEverythingPreset();
+    this.state.selectedBlocks = this.selectedBlocksFromPreset(startingPreset.blocks, this.state.coloursJSON, this.state.optionValue_version);
+    this.state.selectedPresetName = startingPreset.name;
+
     const URLParams = new URL(window.location).searchParams;
     if (URLParams.has("preset")) {
       const decodedPresetBlocks = this.URLToPreset(URLParams.get("preset"));
       if (decodedPresetBlocks !== null) {
         this.state.selectedBlocks = decodedPresetBlocks;
+        this.state.selectedPresetName = ""; // a shared selection is not one of the saved presets
       }
     }
+  }
+
+  getEverythingPreset() {
+    return DefaultPresets.find((defaultPreset) => defaultPreset.localeKey === "BLOCK-SELECTION/PRESETS/EVERYTHING");
+  }
+
+  // Resolves a preset's [colourSetId, presetIndex] pairs into the selectedBlocks map for the given
+  // colours and version. Pure, so the constructor can use it before setState is available.
+  selectedBlocksFromPreset(setsAndBlocks, coloursJSON, optionValue_version) {
+    let selectedBlocks = {};
+    for (const colourSetId of Object.keys(coloursJSON)) {
+      selectedBlocks[colourSetId] = "-1";
+    }
+    for (const [int_colourSetId, presetIndex] of setsAndBlocks) {
+      // we store presetIndex in the cookie, not blockId
+      const colourSetId = int_colourSetId.toString();
+      if (!(colourSetId in coloursJSON)) {
+        continue;
+      }
+      const blockIdAndBlock = Object.entries(coloursJSON[colourSetId].blocks).find(([, block]) => block.presetIndex === presetIndex);
+      if (blockIdAndBlock === undefined) {
+        continue;
+      }
+      const blockId = blockIdAndBlock[0];
+      if (Object.keys(coloursJSON[colourSetId].blocks[blockId].validVersions).includes(optionValue_version.MCVersion)) {
+        selectedBlocks[colourSetId] = blockId;
+      }
+    }
+    return selectedBlocks;
   }
 
   getMergedColoursJSON(customBlocks) {
@@ -202,27 +233,8 @@ class MapartController extends Component {
 
   handleChangeColourSetBlocks = (setsAndBlocks) => {
     const { coloursJSON, optionValue_version } = this.state;
-    let selectedBlocks = {};
-    for (const colourSetId of Object.keys(coloursJSON)) {
-      selectedBlocks[colourSetId] = "-1";
-    }
-    for (const [int_colourSetId, presetIndex] of setsAndBlocks) {
-      // we store presetIndex in the cookie, not blockId
-      const colourSetId = int_colourSetId.toString();
-      if (!(colourSetId in coloursJSON)) {
-        continue;
-      }
-      const blockIdAndBlock = Object.entries(coloursJSON[colourSetId].blocks).find(([, block]) => block.presetIndex === presetIndex);
-      if (blockIdAndBlock === undefined) {
-        continue;
-      }
-      const blockId = blockIdAndBlock[0];
-      if (Object.keys(coloursJSON[colourSetId].blocks[blockId].validVersions).includes(optionValue_version.MCVersion)) {
-        selectedBlocks[colourSetId] = blockId;
-      }
-    }
     this.setState({
-      selectedBlocks,
+      selectedBlocks: this.selectedBlocksFromPreset(setsAndBlocks, coloursJSON, optionValue_version),
     });
   };
 
@@ -469,10 +481,6 @@ class MapartController extends Component {
     }
   };
 
-  onGetViewOnlineNBT = (viewOnline_NBT) => {
-    this.setState({ viewOnline_NBT });
-  };
-
   downloadBlobFile(downloadBlob, filename) {
     const downloadURL = window.URL.createObjectURL(downloadBlob);
     const downloadElt = document.createElement("a");
@@ -546,19 +554,15 @@ class MapartController extends Component {
 
     this.setState({ selectedPresetName: presetName });
 
-    if (presetName === "None") {
-      this.handleChangeColourSetBlocks([]);
-    } else {
-      const selectedPreset = presets.find((preset) => preset.name === presetName);
-      if (selectedPreset !== undefined) {
-        this.handleChangeColourSetBlocks(selectedPreset.blocks);
-      }
+    const selectedPreset = presets.find((preset) => preset.name === presetName);
+    if (selectedPreset !== undefined) {
+      this.handleChangeColourSetBlocks(selectedPreset.blocks);
     }
   };
 
   canDeletePreset = () => {
     const { selectedPresetName } = this.state;
-    return selectedPresetName !== "None" && !DefaultPresets.find((defaultPreset) => defaultPreset.name === selectedPresetName);
+    return selectedPresetName !== "" && !DefaultPresets.find((defaultPreset) => defaultPreset.name === selectedPresetName);
   };
 
   handleDeletePreset = () => {
@@ -567,10 +571,12 @@ class MapartController extends Component {
     if (!this.canDeletePreset()) return;
     if (!window.confirm(`${getLocaleString("BLOCK-SELECTION/PRESETS/DELETE-CONFIRM")} ${selectedPresetName}`)) return;
     const presets_new = presets.filter((preset) => preset.name !== selectedPresetName);
+    const fallbackPreset = this.getEverythingPreset();
     this.setState({
       presets: presets_new,
-      selectedPresetName: "None",
+      selectedPresetName: fallbackPreset.name,
     });
+    this.handleChangeColourSetBlocks(fallbackPreset.blocks);
     CookieManager.setCookie("mapartcraft_presets", JSON.stringify(presets_new));
   };
 
@@ -708,17 +714,6 @@ class MapartController extends Component {
 
   handleSetMapMaterials = (currentMaterialsData) => {
     this.setState({ currentMaterialsData: currentMaterialsData, mapPreviewWorker_inProgress: false });
-  };
-
-  onChooseViewOnline3D = () => {
-    this.setState({ viewOnline_3D: true });
-  };
-
-  handleViewOnline3DEscape = () => {
-    this.setState({
-      viewOnline_NBT: null,
-      viewOnline_3D: false,
-    });
   };
 
   handleAddCustomBlock = (block_colourSetId, block_name, block_nbtTags, block_versions, block_needsSupport, block_flammable) => {
@@ -865,8 +860,6 @@ class MapartController extends Component {
       selectedPresetName,
       currentMaterialsData,
       mapPreviewWorker_inProgress,
-      viewOnline_NBT,
-      viewOnline_3D,
     } = this.state;
     return (
       <div className="mapartController">
@@ -983,7 +976,6 @@ class MapartController extends Component {
               currentMaterialsData={currentMaterialsData}
               mapPreviewWorker_inProgress={mapPreviewWorker_inProgress}
               downloadBlobFile={this.downloadBlobFile}
-              onGetViewOnlineNBT={this.onGetViewOnlineNBT}
             />
           </div>
           <MapPreview
@@ -1057,30 +1049,6 @@ class MapartController extends Component {
             onChangeColourSetBlock={this.handleChangeColourSetBlock}
           />
         ) : null}
-        {viewOnline_NBT !== null &&
-          (viewOnline_3D ? (
-            <ViewOnline3D
-              getLocaleString={getLocaleString}
-              coloursJSON={coloursJSON}
-              optionValue_version={optionValue_version}
-              optionValue_mapSize_x={optionValue_mapSize_x}
-              optionValue_mapSize_y={optionValue_mapSize_y}
-              viewOnline_NBT={viewOnline_NBT}
-              handleViewOnline3DEscape={this.handleViewOnline3DEscape}
-            />
-          ) : (
-            <ViewOnline2D
-              getLocaleString={getLocaleString}
-              coloursJSON={coloursJSON}
-              optionValue_version={optionValue_version}
-              optionValue_mapSize_x={optionValue_mapSize_x}
-              optionValue_mapSize_y={optionValue_mapSize_y}
-              optionValue_staircasing={optionValue_staircasing}
-              viewOnline_NBT={viewOnline_NBT}
-              onGetViewOnlineNBT={this.onGetViewOnlineNBT}
-              onChooseViewOnline3D={this.onChooseViewOnline3D}
-            />
-          ))}
       </div>
     );
   }

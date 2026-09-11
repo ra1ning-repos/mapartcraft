@@ -15,7 +15,6 @@ import "./greenButtons.css";
 class GreenButtons extends Component {
   // For download buttons etc
   state = {
-    buttonWidth_viewOnline: 1,
     buttonWidth_NBT_Joined: 1,
     buttonWidth_NBT_Split: 1,
     buttonWidth_Mapdat_Split: 1,
@@ -26,7 +25,6 @@ class GreenButtons extends Component {
 
   resetButtonWidths() {
     this.setState({
-      buttonWidth_viewOnline: 1,
       buttonWidth_NBT_Joined: 1,
       buttonWidth_NBT_Split: 1,
       buttonWidth_Mapdat_Split: 1,
@@ -49,7 +47,6 @@ class GreenButtons extends Component {
       currentMaterialsData,
       mapPreviewWorker_inProgress,
       downloadBlobFile,
-      onGetViewOnlineNBT,
     } = this.props;
     if (mapPreviewWorker_inProgress) {
       this.setState({ mapPreviewWorker_onFinishCallback: () => this.getNBT_base(workerHeader) });
@@ -67,10 +64,6 @@ class GreenButtons extends Component {
     this.nbtWorker = new WorkerBuilder(NBTWorker);
     this.nbtWorker.onmessage = (e) => {
       switch (e.data.head) {
-        case "PROGRESS_REPORT_CREATE_NBT_JOINED_FOR_VIEW_ONLINE": {
-          this.setState({ buttonWidth_viewOnline: e.data.body });
-          break;
-        }
         case "PROGRESS_REPORT_CREATE_NBT_JOINED": {
           this.setState({ buttonWidth_NBT_Joined: e.data.body });
           break;
@@ -81,13 +74,6 @@ class GreenButtons extends Component {
         }
         case "PROGRESS_REPORT_CREATE_MAPDAT_SPLIT": {
           this.setState({ buttonWidth_Mapdat_Split: (numberOfSplitsCalculated + e.data.body) / (optionValue_mapSize_x * optionValue_mapSize_y) });
-          break;
-        }
-        case "NBT_FOR_VIEW_ONLINE": {
-          const t1 = performance.now();
-          console.log(`Created NBT for 'view online' by ${(t1 - t0).toString()}ms`);
-          const { NBT_Array } = e.data.body;
-          onGetViewOnlineNBT(NBT_Array);
           break;
         }
         case "NBT_ARRAY": {
@@ -160,10 +146,6 @@ class GreenButtons extends Component {
         currentSelectedBlocks: currentMaterialsData.currentSelectedBlocks,
       },
     });
-  };
-
-  onViewOnlineClicked = () => {
-    this.getNBT_base("CREATE_NBT_JOINED_FOR_VIEW_ONLINE");
   };
 
   onGetNBTClicked = () => {
@@ -273,26 +255,13 @@ class GreenButtons extends Component {
   }
 
   render() {
-    const { buttonWidth_viewOnline, buttonWidth_NBT_Joined, buttonWidth_NBT_Split, buttonWidth_Mapdat_Split } = this.state;
+    const { buttonWidth_NBT_Joined, buttonWidth_NBT_Split, buttonWidth_Mapdat_Split } = this.state;
     const { getLocaleString, optionValue_modeNBTOrMapdat } = this.props;
     let buttons_mapModeConditional;
     // dummy text used in divs with absolutely positioned children to create correct container height
     if (optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId) {
       buttons_mapModeConditional = (
         <React.Fragment>
-          <Tooltip tooltipText={getLocaleString("VIEW-ONLINE/TITLE-TT")}>
-            <div className="greenButton" onClick={this.onViewOnlineClicked}>
-              <span className="greenButton_text_dummy">{getLocaleString("VIEW-ONLINE/TITLE")}</span>
-              <span className="greenButton_text">{getLocaleString("VIEW-ONLINE/TITLE")}</span>
-              <div
-                className="greenButton_progressDiv"
-                style={{
-                  width: `${Math.floor(buttonWidth_viewOnline * 100)}%`,
-                }}
-              />
-            </div>
-          </Tooltip>
-          <br />
           <Tooltip tooltipText={getLocaleString("DOWNLOAD/NBT-SPECIFIC/DOWNLOAD-TT")}>
             <div className="greenButton" onClick={this.onGetNBTClicked}>
               <span className="greenButton_large_text_dummy">{getLocaleString("DOWNLOAD/NBT-SPECIFIC/DOWNLOAD")}</span>

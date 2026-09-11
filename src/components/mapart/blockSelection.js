@@ -226,7 +226,6 @@ class BlockSelection extends Component {
           {":"}
         </b>{" "}
         <select id="presets" value={selectedPresetName} onChange={onPresetChange}>
-          <option value="None">{getLocaleString("BLOCK-SELECTION/PRESETS/NONE")}</option>
           {presets.map((preset) => (
             <option value={preset.name} key={preset.name}>
               {"localeKey" in preset ? getLocaleString(preset.localeKey) : preset.name}

@@ -879,14 +879,13 @@ onmessage = (e) => {
   setupExactColourCache();
   setupColoursLayoutsFromPixelsData();
 
-  if (["CREATE_NBT_JOINED_FOR_VIEW_ONLINE", "CREATE_NBT_JOINED"].includes(headerMessage)) {
+  if (headerMessage === "CREATE_NBT_JOINED") {
     mergeMaps();
   }
 
   progressReportHead = `PROGRESS_REPORT_${headerMessage}`;
 
   switch (headerMessage) {
-    case "CREATE_NBT_JOINED_FOR_VIEW_ONLINE":
     case "CREATE_NBT_JOINED":
     case "CREATE_NBT_SPLIT": {
       for (let whichMap_y = 0; whichMap_y < maps.length; whichMap_y++) {
@@ -894,7 +893,7 @@ onmessage = (e) => {
           const map_NBT = new Map_NBT(maps[whichMap_y][whichMap_x]);
           const NBT_Array = map_NBT.getNBT();
           postMessage({
-            head: headerMessage === "CREATE_NBT_JOINED_FOR_VIEW_ONLINE" ? "NBT_FOR_VIEW_ONLINE" : "NBT_ARRAY",
+            head: "NBT_ARRAY",
             body: {
               whichMap_x: whichMap_x,
               whichMap_y: whichMap_y,
