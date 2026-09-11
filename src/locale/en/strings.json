@@ -72,6 +72,25 @@
     "SCALE-PLUS-TT": "Make preview bigger",
     "GENERATING-CURVE": "Generating space-filling curve…"
   },
+  "IMAGE-EDITOR": {
+    "TITLE": "Image editor",
+    "COPY-FROM-PREVIEW": "Copy current map",
+    "COPY-FROM-PREVIEW-TT": "Moves the dithered image to the canvas for editing",
+    "BRUSH": "Brush",
+    "BRUSH-TT": "Paint some pixels",
+    "BUCKET": "Fill",
+    "BUCKET-TT": "Paint lots of pixels",
+    "EYEDROPPER": "Eyedropper",
+    "EYEDROPPER-TT": "Color picker",
+    "UNDO": "Undo",
+    "UNDO-TT": "Undo the action (Ctrl+Z)",
+    "REDO": "Redo",
+    "REDO-TT": "Redo (Ctrl+Y or Ctrl+Shift+Z)",
+    "PALETTE": "Palette",
+    "DOWNLOAD-EDITED": "Download the edited image",
+    "OUTSIDE-PALETTE": "pixels use colours the current block selection cannot produce",
+    "OUTSIDE-PALETTE-TT": "These were painted with blocks that have since been deselected."
+  },
   "MAP-SETTINGS": {
     "TITLE": "Settings",
     "MODE": "Mode",

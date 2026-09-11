@@ -4,6 +4,7 @@ import CookieManager from "../../cookieManager";
 import BlockSelection from "./blockSelection";
 import GreenButtons from "./greenButtons";
 import MapPreview from "./mapPreview";
+import ImageEditor from "./imageEditor";
 import MapSettings from "./mapSettings";
 import Materials from "./materials";
 import coloursJSON from "./json/coloursJSON.json";
@@ -979,45 +980,89 @@ class MapartController extends Component {
             />
           </div>
           <div className="sectionPreviewArea">
-            <MapPreview
-              getLocaleString={getLocaleString}
-              coloursJSON={coloursJSON}
-              selectedBlocks={selectedBlocks}
-              disabledTones={disabledTones}
-              optionValue_version={optionValue_version}
-              optionValue_modeNBTOrMapdat={optionValue_modeNBTOrMapdat}
-              optionValue_mapSize_x={optionValue_mapSize_x}
-              optionValue_mapSize_y={optionValue_mapSize_y}
-              optionValue_cropImage={optionValue_cropImage}
-              optionValue_cropImage_zoom={optionValue_cropImage_zoom}
-              optionValue_cropImage_percent_x={optionValue_cropImage_percent_x}
-              optionValue_cropImage_percent_y={optionValue_cropImage_percent_y}
-              optionValue_showGridOverlay={optionValue_showGridOverlay}
-              optionValue_staircasing={optionValue_staircasing}
-              optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
-              optionValue_transparency={optionValue_transparency}
-              optionValue_transparencyTolerance={optionValue_transparencyTolerance}
-              optionValue_betterColour={optionValue_betterColour}
-              optionValue_dithering={optionValue_dithering}
-              optionValue_dithering_propagation_red={optionValue_dithering_propagation_red}
-              optionValue_dithering_propagation_green={optionValue_dithering_propagation_green}
-              optionValue_dithering_propagation_blue={optionValue_dithering_propagation_blue}
-              optionValue_dithering_boustrophedon={optionValue_dithering_boustrophedon}
-              optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
-              preProcessingValue_brightness={preProcessingValue_brightness}
-              preProcessingValue_contrast={preProcessingValue_contrast}
-              preProcessingValue_saturation={preProcessingValue_saturation}
-              preProcessingValue_blackPoint={preProcessingValue_blackPoint}
-              preProcessingValue_whitePoint={preProcessingValue_whitePoint}
-              preProcessingValue_gamma={preProcessingValue_gamma}
-              preProcessingValue_sharpness={preProcessingValue_sharpness}
-              preProcessingValue_backgroundColourSelect={preProcessingValue_backgroundColourSelect}
-              preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
-              uploadedImage={uploadedImage}
-              onFileDialogEvent={this.onFileDialogEvent}
-              onGetMapMaterials={this.handleSetMapMaterials}
-              onMapPreviewWorker_begin={this.onMapPreviewWorker_begin}
-            />
+            <div className="previewAndEditor">
+              <MapPreview
+                getLocaleString={getLocaleString}
+                coloursJSON={coloursJSON}
+                selectedBlocks={selectedBlocks}
+                disabledTones={disabledTones}
+                optionValue_version={optionValue_version}
+                optionValue_modeNBTOrMapdat={optionValue_modeNBTOrMapdat}
+                optionValue_mapSize_x={optionValue_mapSize_x}
+                optionValue_mapSize_y={optionValue_mapSize_y}
+                optionValue_cropImage={optionValue_cropImage}
+                optionValue_cropImage_zoom={optionValue_cropImage_zoom}
+                optionValue_cropImage_percent_x={optionValue_cropImage_percent_x}
+                optionValue_cropImage_percent_y={optionValue_cropImage_percent_y}
+                optionValue_showGridOverlay={optionValue_showGridOverlay}
+                optionValue_staircasing={optionValue_staircasing}
+                optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
+                optionValue_transparency={optionValue_transparency}
+                optionValue_transparencyTolerance={optionValue_transparencyTolerance}
+                optionValue_betterColour={optionValue_betterColour}
+                optionValue_dithering={optionValue_dithering}
+                optionValue_dithering_propagation_red={optionValue_dithering_propagation_red}
+                optionValue_dithering_propagation_green={optionValue_dithering_propagation_green}
+                optionValue_dithering_propagation_blue={optionValue_dithering_propagation_blue}
+                optionValue_dithering_boustrophedon={optionValue_dithering_boustrophedon}
+                optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
+                preProcessingValue_brightness={preProcessingValue_brightness}
+                preProcessingValue_contrast={preProcessingValue_contrast}
+                preProcessingValue_saturation={preProcessingValue_saturation}
+                preProcessingValue_blackPoint={preProcessingValue_blackPoint}
+                preProcessingValue_whitePoint={preProcessingValue_whitePoint}
+                preProcessingValue_gamma={preProcessingValue_gamma}
+                preProcessingValue_sharpness={preProcessingValue_sharpness}
+                preProcessingValue_backgroundColourSelect={preProcessingValue_backgroundColourSelect}
+                preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
+                uploadedImage={uploadedImage}
+                onFileDialogEvent={this.onFileDialogEvent}
+                onGetMapMaterials={this.handleSetMapMaterials}
+                onMapPreviewWorker_begin={this.onMapPreviewWorker_begin}
+              />
+              <ImageEditor
+                getLocaleString={getLocaleString}
+                coloursJSON={coloursJSON}
+                selectedBlocks={selectedBlocks}
+                disabledTones={disabledTones}
+                optionValue_version={optionValue_version}
+                optionValue_modeNBTOrMapdat={optionValue_modeNBTOrMapdat}
+                optionValue_mapSize_x={optionValue_mapSize_x}
+                optionValue_mapSize_y={optionValue_mapSize_y}
+                optionValue_cropImage={optionValue_cropImage}
+                optionValue_cropImage_zoom={optionValue_cropImage_zoom}
+                optionValue_cropImage_percent_x={optionValue_cropImage_percent_x}
+                optionValue_cropImage_percent_y={optionValue_cropImage_percent_y}
+                optionValue_staircasing={optionValue_staircasing}
+                optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
+                optionValue_supportBlock={optionValue_supportBlock}
+                optionValue_transparency={optionValue_transparency}
+                optionValue_transparencyTolerance={optionValue_transparencyTolerance}
+                optionValue_mapdatFilenameUseId={optionValue_mapdatFilenameUseId}
+                optionValue_mapdatFilenameIdStart={optionValue_mapdatFilenameIdStart}
+                optionValue_betterColour={optionValue_betterColour}
+                optionValue_dithering={optionValue_dithering}
+                optionValue_dithering_propagation_red={optionValue_dithering_propagation_red}
+                optionValue_dithering_propagation_green={optionValue_dithering_propagation_green}
+                optionValue_dithering_propagation_blue={optionValue_dithering_propagation_blue}
+                optionValue_dithering_boustrophedon={optionValue_dithering_boustrophedon}
+                optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
+                preProcessingValue_brightness={preProcessingValue_brightness}
+                preProcessingValue_contrast={preProcessingValue_contrast}
+                preProcessingValue_saturation={preProcessingValue_saturation}
+                preProcessingValue_blackPoint={preProcessingValue_blackPoint}
+                preProcessingValue_whitePoint={preProcessingValue_whitePoint}
+                preProcessingValue_gamma={preProcessingValue_gamma}
+                preProcessingValue_sharpness={preProcessingValue_sharpness}
+                preProcessingValue_backgroundColourSelect={preProcessingValue_backgroundColourSelect}
+                preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
+                uploadedImage={uploadedImage}
+                uploadedImage_baseFilename={uploadedImage_baseFilename}
+                currentMaterialsData={currentMaterialsData}
+                mapPreviewWorker_inProgress={mapPreviewWorker_inProgress}
+                downloadBlobFile={this.downloadBlobFile}
+              />
+            </div>
           </div>
         </div>
         <BlockSelection

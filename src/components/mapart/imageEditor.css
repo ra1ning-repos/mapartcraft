@@ -1,0 +1,107 @@
+.imageEditorDiv {
+  max-width: 100%;
+}
+
+.imageEditorSummary {
+  cursor: pointer;
+}
+
+.imageEditorSummary h2 {
+  display: inline;
+}
+
+.editorToolbar {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 0.3em;
+  row-gap: 0.3em;
+  margin: 0.4em 0;
+}
+
+.editorToolbarSpacer {
+  display: inline-block;
+  width: 0.8em;
+}
+
+.editorToolButton {
+  font-family: inherit;
+  padding: 0.15em 0.6em;
+  cursor: pointer;
+}
+
+.editorToolButton:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.editorToolButton_active {
+  outline: 0.15em solid var(--rebaneGreen);
+}
+
+.editorBody {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  column-gap: 0.8em;
+  row-gap: 0.6em;
+}
+
+.editorCanvas {
+  display: block;
+  image-rendering: optimizeSpeed;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: -o-crisp-edges;
+  image-rendering: pixelated;
+  -ms-interpolation-mode: nearest-neighbor;
+  background-color: #222;
+  outline: 0.1em solid white;
+}
+
+.editorPaletteColumn {
+  display: flex;
+  flex-direction: column;
+  row-gap: 0.4em;
+}
+
+/* Nine across so that with staircasing on (dark, normal, light) each row is exactly three colour sets */
+.editorPalette {
+  display: grid;
+  grid-template-columns: repeat(9, 22px);
+  gap: 3px;
+}
+
+.editorSwatch {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  box-sizing: border-box;
+  border: 1px solid #222;
+  cursor: pointer;
+}
+
+.editorSwatch_selected {
+  border: 1px solid white;
+  outline: 0.15em solid var(--rebaneGreen);
+}
+
+.editorBrushColour {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  column-gap: 0.4em;
+}
+
+.editorDownloads {
+  margin-top: 0.6em;
+  display: flex;
+  flex-direction: column;
+  row-gap: 0.3em;
+}
+
+.editorWarning {
+  color: orange;
+}
