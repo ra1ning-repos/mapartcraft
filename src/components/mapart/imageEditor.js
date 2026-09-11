@@ -35,7 +35,6 @@ const TOOL_ZOOM = "zoom";
 // screen pixels per map pixel, offset so that map coordinate (panX, panY) sits at the viewport's top-left.
 const VIEW_STEP = 128;
 const VIEW_MIN = 128;
-const VIEW_MAX = 640; // five maps across
 const VIEW_DEFAULT = 384;
 const ZOOM_LEVELS = [0.125, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8, 12, 16, 24, 32];
 
@@ -321,8 +320,10 @@ class ImageEditor extends Component {
     this.redraw();
   }
 
+  // No fixed ceiling: the viewport can grow until it would no longer fit the browser window.
   changeViewSize = (delta) => {
-    this.setState((state) => ({ viewSize: Math.min(Math.max(state.viewSize + delta * VIEW_STEP, VIEW_MIN), VIEW_MAX) }));
+    const viewMax = Math.max(VIEW_MIN, Math.floor((Math.min(window.innerWidth, window.innerHeight) - 32) / VIEW_STEP) * VIEW_STEP);
+    this.setState((state) => ({ viewSize: Math.min(Math.max(state.viewSize + delta * VIEW_STEP, VIEW_MIN), viewMax) }));
   };
 
   // Writes one pixel, remembering its previous value in the current stroke the first time it is touched.
@@ -537,8 +538,12 @@ class ImageEditor extends Component {
     e.preventDefault();
     const pixelIndex = this.pixelIndexFromEvent(e);
     // Modifier gestures work in every tool: right-click picks a colour, middle button or Ctrl+left pans.
+    // The one exception is the zoom tool, where right-click is the natural "zoom out".
     if (e.button === 2) {
-      if (pixelIndex !== null) {
+      if (this.state.tool === TOOL_ZOOM) {
+        const { screenX, screenY } = this.documentPointFromEvent(e);
+        this.stepZoom(-1, screenX, screenY);
+      } else if (pixelIndex !== null) {
         this.pickColourAt(pixelIndex);
       }
       return;
