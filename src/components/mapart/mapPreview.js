@@ -26,7 +26,6 @@ class MapPreview extends Component {
     workerProgress: 0,
     curveGenerating: false,
     curveProgress: 0,
-    resampleInfo: null, // { methodX, methodY, scaleX, scaleY, gammaCorrect } for the readout under the preview
   };
 
   mapCanvasWorker = new WorkerBuilder(MapCanvasWorker);
@@ -88,7 +87,6 @@ class MapPreview extends Component {
       prevState.workerProgress === newState.workerProgress &&
       prevState.curveGenerating === newState.curveGenerating &&
       prevState.curveProgress === newState.curveProgress &&
-      prevState.resampleInfo === newState.resampleInfo &&
       !propChanges.every((elt) => {
         return elt === true;
       })
@@ -137,7 +135,6 @@ class MapPreview extends Component {
       prevState.workerProgress === newState.workerProgress &&
       prevState.curveGenerating === newState.curveGenerating &&
       prevState.curveProgress === newState.curveProgress &&
-      prevState.resampleInfo === newState.resampleInfo &&
       !propChanges.every((elt) => {
         return elt === true;
       })
@@ -427,13 +424,12 @@ class MapPreview extends Component {
     }
     const { key } = this.resampleInFlight;
     this.resampleInFlight = null;
-    const { width, height, data, methodX, methodY, scaleX, scaleY, gammaCorrect } = e.data.body;
+    const { width, height, data } = e.data.body;
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
     canvas.getContext("2d").putImageData(new ImageData(data, width, height), 0, 0);
     this.resampledCache = { key, canvas };
-    this.setState({ resampleInfo: { methodX, methodY, scaleX, scaleY, gammaCorrect } });
     if (this.resamplePendingKey !== null) {
       const pending = this.resamplePendingKey;
       this.resamplePendingKey = null;
@@ -728,22 +724,6 @@ class MapPreview extends Component {
     }
   }
 
-  // e.g. "31.3x smaller, area averaged, gamma-correct" / "2x larger, nearest neighbour"
-  describeResample({ methodX, methodY, scaleX, scaleY, gammaCorrect }) {
-    const { getLocaleString } = this.props;
-    const factor = (scale) => (scale >= 1 ? scale : 1 / scale);
-    const fmt = (v) => (Number.isInteger(v) ? v.toString() : v.toFixed(1));
-    const gammaSuffix = gammaCorrect ? `, ${getLocaleString("MAP-PREVIEW/RESAMPLE-GAMMA")}` : "";
-    if (methodX === "nearest" && methodY === "nearest") {
-      return `${fmt(factor(Math.min(scaleX, scaleY)))}x ${getLocaleString("MAP-PREVIEW/RESAMPLE-UP")}`;
-    }
-    if (methodX !== methodY) {
-      return `${getLocaleString("MAP-PREVIEW/RESAMPLE-MIXED")}${gammaSuffix}`;
-    }
-    const downKey = { box: "RESAMPLE-DOWN-BOX", lanczos3: "RESAMPLE-DOWN-LANCZOS3", point: "RESAMPLE-DOWN-POINT" }[methodX];
-    return `${fmt(factor(Math.max(scaleX, scaleY)))}x ${getLocaleString(`MAP-PREVIEW/${downKey}`)}${gammaSuffix}`;
-  }
-
   render() {
     const {
       getLocaleString,
@@ -754,7 +734,7 @@ class MapPreview extends Component {
       onFileDialogEvent,
       uploadedImage,
     } = this.props;
-    const { mapPreviewSizeScale, workerProgress, curveGenerating, curveProgress, resampleInfo } = this.state;
+    const { mapPreviewSizeScale, workerProgress, curveGenerating, curveProgress } = this.state;
     return (
       <div className="section mapPreviewDiv">
         <h2>{getLocaleString("MAP-PREVIEW/TITLE")}</h2>
@@ -809,7 +789,6 @@ class MapPreview extends Component {
                 {uploadedImage === null ? null : `${uploadedImage.width.toString()}x${uploadedImage.height.toString()}`}
               </small>
             </Tooltip>
-            {resampleInfo !== null && <small className="resampleInfo">{this.describeResample(resampleInfo)}</small>}
           </div>
           <div>
             <Tooltip tooltipText={getLocaleString("MAP-PREVIEW/SCALE-PLUS-TT")}>

@@ -68,12 +68,6 @@
     "TITLE": "Map preview",
     "BEST-RESOLUTION-TT": "A source image with this resolution will work the best",
     "ASPECT-RATIO-MISMATCH-TT": "Image doesn't match map's aspect ratio",
-    "RESAMPLE-UP": "larger, nearest neighbour",
-    "RESAMPLE-DOWN-BOX": "smaller, area averaged",
-    "RESAMPLE-DOWN-LANCZOS3": "smaller, Lanczos-3",
-    "RESAMPLE-DOWN-POINT": "smaller, point sampled",
-    "RESAMPLE-MIXED": "stretched: nearest neighbour / downscaled",
-    "RESAMPLE-GAMMA": "gamma-correct",
     "SCALE-MINUS-TT": "Make preview smaller",
     "SCALE-PLUS-TT": "Make preview bigger",
     "GENERATING-CURVE": "Generating space-filling curve…"
@@ -199,7 +193,7 @@
       "BACKGROUND-COLOUR": "Colour"
     },
     "EXTRAS": {
-      "TITLE": "Extras",
+      "TITLE": "Advanced options",
       "MORE-STAIRCASING-OPTIONS": "More Staircasing Options",
       "MORE-STAIRCASING-OPTIONS-TT": "Full-Dark, Full-Light, and Full-Unobtainable options"
     }

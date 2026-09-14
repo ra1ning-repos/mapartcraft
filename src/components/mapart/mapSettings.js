@@ -275,36 +275,46 @@ class MapSettings extends Component {
         </table>
       </div>
     );
-    const setting_downscaling = (
-      <React.Fragment>
-        <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/DOWNSCALING/TITLE-TT")}>
-          <b>
-            {getLocaleString("MAP-SETTINGS/DOWNSCALING/TITLE")}
-            {":"}
-          </b>
-        </Tooltip>{" "}
-        <select onChange={onOptionChange_downscaleMethod} value={optionValue_downscaleMethod}>
-          {Object.values(DownscaleMethods).map((downscaleMethod) => (
-            <option key={downscaleMethod.uniqueId} value={downscaleMethod.uniqueId}>
-              {getLocaleString(downscaleMethod.localeKey)}
-            </option>
-          ))}
-        </select>
-        <br />
-        <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/DOWNSCALING/GAMMA-CORRECT-TT")}>
-          <b>
-            {getLocaleString("MAP-SETTINGS/DOWNSCALING/GAMMA-CORRECT")}
-            {":"}
-          </b>
-        </Tooltip>{" "}
-        <input
-          type="checkbox"
-          checked={optionValue_gammaCorrectAveraging}
-          onChange={onOptionChange_gammaCorrectAveraging}
-          disabled={optionValue_downscaleMethod === DownscaleMethods.POINT.uniqueId}
-        />
-        <br />
-      </React.Fragment>
+    const setting_downscaleMethod = (
+      <tr>
+        <th>
+          <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/DOWNSCALING/TITLE-TT")}>
+            <b>
+              {getLocaleString("MAP-SETTINGS/DOWNSCALING/TITLE")}
+              {":"}
+            </b>
+          </Tooltip>{" "}
+        </th>
+        <td>
+          <select onChange={onOptionChange_downscaleMethod} value={optionValue_downscaleMethod}>
+            {Object.values(DownscaleMethods).map((downscaleMethod) => (
+              <option key={downscaleMethod.uniqueId} value={downscaleMethod.uniqueId}>
+                {getLocaleString(downscaleMethod.localeKey)}
+              </option>
+            ))}
+          </select>
+        </td>
+      </tr>
+    );
+    const setting_gammaCorrectAveraging = (
+      <tr>
+        <th>
+          <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/DOWNSCALING/GAMMA-CORRECT-TT")}>
+            <b>
+              {getLocaleString("MAP-SETTINGS/DOWNSCALING/GAMMA-CORRECT")}
+              {":"}
+            </b>
+          </Tooltip>{" "}
+        </th>
+        <td>
+          <input
+            type="checkbox"
+            checked={optionValue_gammaCorrectAveraging}
+            onChange={onOptionChange_gammaCorrectAveraging}
+            disabled={optionValue_downscaleMethod === DownscaleMethods.POINT.uniqueId}
+          />
+        </td>
+      </tr>
     );
     const setting_grid = (
       <React.Fragment>
@@ -676,7 +686,6 @@ class MapSettings extends Component {
       <div>
         <table>
           <tbody>
-            {setting_dithering_boustrophedon}
             {setting_dithering_propagation_red}
             {setting_dithering_propagation_green}
             {setting_dithering_propagation_blue}
@@ -1090,6 +1099,9 @@ class MapSettings extends Component {
           <table>
             <tbody>
               {setting_mode}
+              {setting_downscaleMethod}
+              {setting_gammaCorrectAveraging}
+              {setting_dithering_boustrophedon}
               {setting_extras_moreStaircasingOptions}
             </tbody>
           </table>
@@ -1102,7 +1114,6 @@ class MapSettings extends Component {
         {setting_version}
         {setting_mapSize}
         {settingGroup_cropping}
-        {setting_downscaling}
         {setting_grid}
         {setting_staircasing}
         {settings_mapModeConditional}
