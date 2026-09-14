@@ -28,8 +28,65 @@ import "./imageEditor.css";
 const TOOL_BRUSH = "brush";
 const TOOL_BUCKET = "bucket";
 const TOOL_EYEDROPPER = "eyedropper";
+const TOOL_ERASER = "eraser";
 const TOOL_PAN = "pan";
 const TOOL_ZOOM = "zoom";
+
+const TRANSPARENT = [0, 0, 0, 0]; // the Air "colour": no block at all in the NBT, as elsewhere in the app
+const AIR_COLOUR_SET_ID = "61";
+const isAir = (rgba) => rgba !== null && rgba.length > 3 && rgba[3] === 0;
+const THUMBNAIL_MAX = 72; // longest side of a copied-selection thumbnail, in screen pixels
+
+// Tool icons: simple 16x16 line drawings in currentColor, so they follow the button's text colour.
+const svgIcon = (children) => (
+  <svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {children}
+  </svg>
+);
+const ICONS = {
+  brush: svgIcon(
+    <React.Fragment>
+      <path d="M10.5 2.5l3 3L6 13H3v-3z" />
+      <path d="M9 4l3 3" />
+    </React.Fragment>
+  ),
+  bucket: svgIcon(
+    <React.Fragment>
+      <path d="M3 8.5l5-5 5 5-5 5z" />
+      <path d="M8 3.5V1.5" />
+      <path d="M13.5 11.5c0 1.1-.7 2-1.5 2s-1.5-.9-1.5-2c0-1 1.5-2.5 1.5-2.5s1.5 1.5 1.5 2.5z" />
+    </React.Fragment>
+  ),
+  eraser: svgIcon(
+    <React.Fragment>
+      <path d="M9.5 2.5l4 4L7 13H4.5l-2-2z" />
+      <path d="M6 6l4 4" />
+      <path d="M7 13h6.5" />
+    </React.Fragment>
+  ),
+  eyedropper: svgIcon(
+    <React.Fragment>
+      <path d="M10 6L4 12v1.5H5.5L11.5 7.5" />
+      <path d="M9 5l2.5 2.5" />
+      <path d="M11 3.5l1.5-1.5 1.5 1.5L12.5 5" />
+    </React.Fragment>
+  ),
+  pan: svgIcon(
+    <React.Fragment>
+      <path d="M5 9V4.5a1 1 0 0 1 2 0V8" />
+      <path d="M7 8V3a1 1 0 0 1 2 0v5" />
+      <path d="M9 8V4a1 1 0 0 1 2 0v4.5" />
+      <path d="M11 8.5V6a1 1 0 0 1 2 0v3.5c0 3-2 4.5-4.5 4.5S4.5 12.5 4 11L2.8 8.8a1 1 0 0 1 1.7-1L5 9" />
+    </React.Fragment>
+  ),
+  zoom: svgIcon(
+    <React.Fragment>
+      <circle cx="7" cy="7" r="4.5" />
+      <path d="M10.5 10.5L14 14" />
+      <path d="M5 7h4M7 5v4" />
+    </React.Fragment>
+  ),
+};
 
 // The viewport is a square of VIEW_STEP multiples; the map (document) is drawn inside it at `zoom`
 // screen pixels per map pixel, offset so that map coordinate (panX, panY) sits at the viewport's top-left.
@@ -55,14 +112,24 @@ class ImageEditor extends Component {
     materialsWorker_inProgress: false,
     pixelsOutsidePalette: 0,
     panning: false,
+    selectionMode: false, // brush / fill / eraser act on the selection mask instead of the picture
+    selectedCount: 0, // number of pixels currently in the selection mask
+    clipboard: [], // copied selections: { id, x, y, width, height, pixels, mask, count, thumbnail }
     revision: 0, // bumped on every change so the palette/warnings re-render
   };
 
   canvasRef = React.createRef();
   imageData = null; // ImageData; the single source of truth for the picture
   documentCanvas = null; // offscreen canvas mirroring imageData, drawn into the viewport scaled and offset
+  selectionMask = null; // Uint8Array, one entry per pixel, 1 = selected
+  maskCanvas = null; // offscreen canvas, opaque where selected, drawn hatched over the viewport
+  overlayCanvas = null; // viewport-sized scratch used to clip the hatch pattern to the selection
+  hatchPattern = null;
+  checkerPattern = null;
+  airAvailable = false; // whether the Air colour set is in the block selection (set by getPalette)
+  nextClipboardId = 1;
   view = { zoom: 3, panX: 0, panY: 0 }; // kept off React state: it changes on every drag / wheel event
-  drag = null; // { mode: "paint" | "pan", lastX, lastY } while a mouse button is held
+  drag = null; // { mode: "pan", lastX, lastY } or { mode: "paint", target: "image" | "mask", value } while a button is held
   undoStack = [];
   redoStack = [];
   currentStroke = null; // Map<pixelIndex, [r, g, b, a] before> while the mouse is down
@@ -74,7 +141,11 @@ class ImageEditor extends Component {
   componentDidMount() {
     this.imageData = new ImageData(this.state.canvasWidth, this.state.canvasHeight);
     this.documentCanvas = document.createElement("canvas");
+    this.maskCanvas = document.createElement("canvas");
+    this.overlayCanvas = document.createElement("canvas");
+    this.selectionMask = new Uint8Array(this.state.canvasWidth * this.state.canvasHeight);
     this.syncDocumentCanvas();
+    this.syncMaskCanvas();
     this.zoomToFit();
     window.addEventListener("mouseup", this.onWindowMouseUp);
     window.addEventListener("keydown", this.onKeyDown);
@@ -143,11 +214,15 @@ class ImageEditor extends Component {
         }
         const rgb = coloursJSON[colourSetId].tonesRGB[toneKey];
         if (rgb[0] < 0) {
-          continue; // the transparency placeholder colour set is not paintable
+          continue; // Air has no colour; it gets its own swatch below
         }
-        palette.push({ colourSetId, toneKey, rgb, blockName: coloursJSON[colourSetId].blocks[selectedBlocks[colourSetId]].displayName });
+        const blockName = coloursJSON[colourSetId].blocks[selectedBlocks[colourSetId]].displayName;
+        palette.push({ colourSetId, toneKey, rgb, blockName, label: staircaseMode.toneKeys.length > 1 ? `${blockName} (${toneKey})` : blockName });
       }
     }
+    // Air is paintable whenever it is part of the block selection: pixels painted with it stay fully
+    // transparent, which the map worker keeps as Air and the NBT worker turns into "no block here".
+    this.airAvailable = selectedBlocks[AIR_COLOUR_SET_ID] !== undefined && selectedBlocks[AIR_COLOUR_SET_ID] !== "-1";
     // Order by colour rather than by colour set id: hue first, lightness within a hue, and near-greys
     // in their own group at the end from dark to light. Sorting on each colour set's normal tone keeps a
     // set's dark / normal / light triple together, so with staircasing on every row of nine is three sets.
@@ -206,7 +281,11 @@ class ImageEditor extends Component {
     const data = this.imageData.data;
     let count = 0;
     for (let i = 0; i < data.length; i += 4) {
-      if (data[i + 3] !== 0 && !allowed.has(this.paletteKey(data[i], data[i + 1], data[i + 2]))) {
+      if (data[i + 3] === 0) {
+        if (!this.airAvailable) {
+          count++; // transparent, but Air is not selected: the download will have to quantise it to a block
+        }
+      } else if (!allowed.has(this.paletteKey(data[i], data[i + 1], data[i + 2]))) {
         count++;
       }
     }
@@ -227,8 +306,76 @@ class ImageEditor extends Component {
     this.documentCanvas.getContext("2d").putImageData(this.imageData, 0, 0);
   }
 
+  // Mirrors selectionMask into maskCanvas: opaque white where selected, transparent elsewhere.
+  syncMaskCanvas() {
+    if (this.maskCanvas === null || this.selectionMask === null) {
+      return;
+    }
+    const { width, height } = this.imageData;
+    if (this.maskCanvas.width !== width || this.maskCanvas.height !== height) {
+      this.maskCanvas.width = width;
+      this.maskCanvas.height = height;
+    }
+    const maskImage = new ImageData(width, height);
+    const data = maskImage.data;
+    for (let i = 0; i < this.selectionMask.length; i++) {
+      if (this.selectionMask[i]) {
+        const p = i * 4;
+        data[p] = 255;
+        data[p + 1] = 255;
+        data[p + 2] = 255;
+        data[p + 3] = 255;
+      }
+    }
+    this.maskCanvas.getContext("2d").putImageData(maskImage, 0, 0);
+  }
+
+  // Small grey checkerboard, in screen space, drawn behind the document so transparent (Air) pixels are
+  // recognisable as such rather than blending into the viewport background.
+  getCheckerPattern(ctx) {
+    if (this.checkerPattern === null) {
+      const tile = document.createElement("canvas");
+      tile.width = 16;
+      tile.height = 16;
+      const tctx = tile.getContext("2d");
+      tctx.fillStyle = "#3a3a3a";
+      tctx.fillRect(0, 0, 16, 16);
+      tctx.fillStyle = "#2a2a2a";
+      tctx.fillRect(0, 0, 8, 8);
+      tctx.fillRect(8, 8, 8, 8);
+      this.checkerPattern = ctx.createPattern(tile, "repeat");
+    }
+    return this.checkerPattern;
+  }
+
+  // Diagonal magenta / white stripes in screen space. Containing both a light and a saturated colour is
+  // what keeps the selection visible whatever the picture underneath happens to be.
+  getHatchPattern(ctx) {
+    if (this.hatchPattern === null) {
+      const tile = document.createElement("canvas");
+      tile.width = 8;
+      tile.height = 8;
+      const tctx = tile.getContext("2d");
+      tctx.fillStyle = "rgb(255, 0, 255)";
+      tctx.fillRect(0, 0, 8, 8);
+      tctx.strokeStyle = "rgb(255, 255, 255)";
+      tctx.lineWidth = 2;
+      tctx.beginPath();
+      tctx.moveTo(-2, 10);
+      tctx.lineTo(10, -2);
+      tctx.moveTo(-2, 2);
+      tctx.lineTo(2, -2);
+      tctx.moveTo(6, 10);
+      tctx.lineTo(10, 6);
+      tctx.stroke();
+      this.hatchPattern = ctx.createPattern(tile, "repeat");
+    }
+    return this.hatchPattern;
+  }
+
   // Draws the document into the square viewport at the current pan and zoom, nearest-neighbour, with the
-  // scaled offset snapped to whole screen pixels so the pixel grid never shimmers.
+  // scaled offset snapped to whole screen pixels so the pixel grid never shimmers. The selection, if any,
+  // goes on top as a hatched, semi-transparent layer.
   redraw() {
     const canvas = this.canvasRef.current;
     if (canvas === null || this.documentCanvas === null) {
@@ -242,10 +389,33 @@ class ImageEditor extends Component {
     const top = Math.round(-panY * zoom);
     const width = Math.round(this.imageData.width * zoom);
     const height = Math.round(this.imageData.height * zoom);
+    ctx.fillStyle = this.getCheckerPattern(ctx);
+    ctx.fillRect(left, top, width, height);
     ctx.drawImage(this.documentCanvas, left, top, width, height);
     ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
     ctx.lineWidth = 1;
     ctx.strokeRect(left - 0.5, top - 0.5, width + 1, height + 1);
+
+    if (this.state.selectedCount > 0 || (this.drag !== null && this.drag.target === "mask")) {
+      // scale the mask into a viewport-sized layer, keep the hatch only where the mask is, then composite
+      const overlay = this.overlayCanvas;
+      if (overlay.width !== canvas.width || overlay.height !== canvas.height) {
+        overlay.width = canvas.width;
+        overlay.height = canvas.height;
+      }
+      const octx = overlay.getContext("2d");
+      octx.globalCompositeOperation = "source-over";
+      octx.clearRect(0, 0, overlay.width, overlay.height);
+      octx.imageSmoothingEnabled = false;
+      octx.drawImage(this.maskCanvas, left, top, width, height);
+      octx.globalCompositeOperation = "source-in";
+      octx.fillStyle = this.getHatchPattern(octx);
+      octx.fillRect(0, 0, overlay.width, overlay.height);
+      octx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 0.55;
+      ctx.drawImage(overlay, 0, 0);
+      ctx.globalAlpha = 1;
+    }
   }
 
   // Screen position of a mouse event -> fractional document coordinates
@@ -327,23 +497,41 @@ class ImageEditor extends Component {
   };
 
   // Writes one pixel, remembering its previous value in the current stroke the first time it is touched.
-  setPixel(pixelIndex, rgb) {
+  // rgba may be a 3-element colour (painted opaque) or a 4-element value (the eraser's transparent).
+  setPixel(pixelIndex, rgba) {
     const data = this.imageData.data;
     const i = pixelIndex * 4;
-    if (data[i] === rgb[0] && data[i + 1] === rgb[1] && data[i + 2] === rgb[2] && data[i + 3] === 255) {
+    const alpha = rgba.length > 3 ? rgba[3] : 255;
+    if (data[i] === rgba[0] && data[i + 1] === rgba[1] && data[i + 2] === rgba[2] && data[i + 3] === alpha) {
       return;
     }
     if (this.currentStroke !== null && !this.currentStroke.has(pixelIndex)) {
       this.currentStroke.set(pixelIndex, [data[i], data[i + 1], data[i + 2], data[i + 3]]);
     }
-    data[i] = rgb[0];
-    data[i + 1] = rgb[1];
-    data[i + 2] = rgb[2];
-    data[i + 3] = 255;
+    data[i] = rgba[0];
+    data[i + 1] = rgba[1];
+    data[i + 2] = rgba[2];
+    data[i + 3] = alpha;
+  }
+
+  setMaskPixel(pixelIndex, value) {
+    if (this.selectionMask[pixelIndex] !== value) {
+      this.selectionMask[pixelIndex] = value;
+      this.selectedCountLive += value ? 1 : -1;
+    }
+  }
+
+  // Applies the current drag's paint value (picture colour or mask state) to one pixel.
+  applyPaint(pixelIndex) {
+    if (this.drag.target === "mask") {
+      this.setMaskPixel(pixelIndex, this.drag.value);
+    } else {
+      this.setPixel(pixelIndex, this.drag.value);
+    }
   }
 
   // Bresenham between two pixel indices so a fast drag leaves an unbroken line.
-  paintLine(fromIndex, toIndex, rgb) {
+  paintLine(fromIndex, toIndex) {
     const width = this.imageData.width;
     let x0 = fromIndex % width;
     let y0 = (fromIndex - x0) / width;
@@ -355,7 +543,7 @@ class ImageEditor extends Component {
     const sy = y0 < y1 ? 1 : -1;
     let err = dx + dy;
     for (;;) {
-      this.setPixel(y0 * width + x0, rgb);
+      this.applyPaint(y0 * width + x0);
       if (x0 === x1 && y0 === y1) {
         break;
       }
@@ -372,11 +560,12 @@ class ImageEditor extends Component {
   }
 
   // Four-connected flood fill over pixels that exactly match the clicked pixel's RGBA.
-  floodFill(startIndex, rgb) {
+  floodFill(startIndex, rgba) {
     const { width, height, data } = this.imageData;
     const s = startIndex * 4;
     const target = [data[s], data[s + 1], data[s + 2], data[s + 3]];
-    if (target[0] === rgb[0] && target[1] === rgb[1] && target[2] === rgb[2] && target[3] === 255) {
+    const alpha = rgba.length > 3 ? rgba[3] : 255;
+    if (target[0] === rgba[0] && target[1] === rgba[1] && target[2] === rgba[2] && target[3] === alpha) {
       return;
     }
     const visited = new Uint8Array(width * height);
@@ -384,7 +573,7 @@ class ImageEditor extends Component {
     visited[startIndex] = 1;
     while (stack.length > 0) {
       const index = stack.pop();
-      this.setPixel(index, rgb);
+      this.setPixel(index, rgba);
       const x = index % width;
       const y = (index - x) / width;
       const neighbours = [];
@@ -404,6 +593,117 @@ class ImageEditor extends Component {
       }
     }
   }
+
+  // Selection-mode fill: selects every unselected pixel reachable from the click without crossing selected
+  // ones. Paint a closed outline with the brush, click inside, and the enclosed area joins the selection.
+  floodFillMask(startIndex) {
+    const { width, height } = this.imageData;
+    if (this.selectionMask[startIndex]) {
+      return;
+    }
+    const stack = [startIndex];
+    this.setMaskPixel(startIndex, 1);
+    while (stack.length > 0) {
+      const index = stack.pop();
+      const x = index % width;
+      const y = (index - x) / width;
+      const neighbours = [];
+      if (x > 0) neighbours.push(index - 1);
+      if (x < width - 1) neighbours.push(index + 1);
+      if (y > 0) neighbours.push(index - width);
+      if (y < height - 1) neighbours.push(index + width);
+      for (const n of neighbours) {
+        if (!this.selectionMask[n]) {
+          this.setMaskPixel(n, 1);
+          stack.push(n);
+        }
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------- selection and copied selections
+
+  selectedCountLive = 0; // running count while a mask stroke is in progress; committed to state afterwards
+
+  afterMaskChange() {
+    this.syncMaskCanvas();
+    this.setState({ selectedCount: this.selectedCountLive });
+    this.redraw();
+  }
+
+  clearSelection() {
+    this.selectionMask.fill(0);
+    this.selectedCountLive = 0;
+    this.afterMaskChange();
+  }
+
+  // Lifts the selected pixels (with their positions) into a copied-selection entry and clears the selection.
+  onCopySelection = () => {
+    const { width, height, data } = this.imageData;
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+    for (let i = 0; i < this.selectionMask.length; i++) {
+      if (this.selectionMask[i]) {
+        const x = i % width;
+        const y = (i - x) / width;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+    if (maxX < 0) {
+      return;
+    }
+    const w = maxX - minX + 1;
+    const h = maxY - minY + 1;
+    const pixels = new Uint8ClampedArray(w * h * 4);
+    const mask = new Uint8Array(w * h);
+    let count = 0;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const src = (minY + y) * width + (minX + x);
+        if (!this.selectionMask[src]) {
+          continue;
+        }
+        const dst = y * w + x;
+        mask[dst] = 1;
+        pixels.set(data.subarray(src * 4, src * 4 + 4), dst * 4);
+        count++;
+      }
+    }
+    // thumbnail: only the copied pixels, everything else transparent
+    const thumbCanvas = document.createElement("canvas");
+    thumbCanvas.width = w;
+    thumbCanvas.height = h;
+    thumbCanvas.getContext("2d").putImageData(new ImageData(new Uint8ClampedArray(pixels), w, h), 0, 0);
+    const entry = { id: this.nextClipboardId++, x: minX, y: minY, width: w, height: h, pixels, mask, count, thumbnail: thumbCanvas.toDataURL("image/png") };
+    this.setState((state) => ({ clipboard: [...state.clipboard, entry] }));
+    this.clearSelection();
+  };
+
+  // Writes a copied selection's pixels back exactly where they came from, as one undoable stroke.
+  onPasteClipboardEntry = (entry) => {
+    if (entry.x + entry.width > this.imageData.width || entry.y + entry.height > this.imageData.height) {
+      return; // cannot happen while the canvas size is unchanged, but never write out of bounds
+    }
+    this.currentStroke = new Map();
+    for (let y = 0; y < entry.height; y++) {
+      for (let x = 0; x < entry.width; x++) {
+        const local = y * entry.width + x;
+        if (entry.mask[local]) {
+          this.setPixel((entry.y + y) * this.imageData.width + (entry.x + x), entry.pixels.subarray(local * 4, local * 4 + 4));
+        }
+      }
+    }
+    this.finishStroke();
+  };
+
+  onDeleteClipboardEntry = (id) => {
+    this.setState((state) => ({ clipboard: state.clipboard.filter((entry) => entry.id !== id) }));
+  };
 
   // ---------------------------------------------------------------- history
 
@@ -449,8 +749,16 @@ class ImageEditor extends Component {
   }
 
   applySnapshot(snapshot) {
+    const sizeChanged = snapshot.width !== this.imageData.width || snapshot.height !== this.imageData.height;
     this.imageData = new ImageData(new Uint8ClampedArray(snapshot.data), snapshot.width, snapshot.height);
     this.syncDocumentCanvas();
+    if (sizeChanged) {
+      // positions in the selection and in copied selections only mean something at the size they were made
+      this.selectionMask = new Uint8Array(snapshot.width * snapshot.height);
+      this.selectedCountLive = 0;
+      this.syncMaskCanvas();
+      this.setState({ selectedCount: 0, clipboard: [] });
+    }
     this.setState({ canvasWidth: snapshot.width, canvasHeight: snapshot.height }, () => this.zoomToFit());
   }
 
@@ -515,6 +823,8 @@ class ImageEditor extends Component {
     const i = pixelIndex * 4;
     if (data[i + 3] !== 0) {
       this.setState({ brushColour: [data[i], data[i + 1], data[i + 2]] });
+    } else if (this.airAvailable) {
+      this.setState({ brushColour: TRANSPARENT });
     }
   }
 
@@ -524,14 +834,26 @@ class ImageEditor extends Component {
     this.setState({ panning: true });
   }
 
-  beginPaint(pixelIndex) {
-    this.currentStroke = new Map();
-    this.drag = { mode: "paint" };
-    this.setPixel(pixelIndex, this.state.brushColour);
+  // Starts a brush / eraser drag. target "image" writes rgba into the picture (recorded for undo);
+  // target "mask" writes 1 / 0 into the selection mask.
+  beginPaint(pixelIndex, target, value) {
+    this.drag = { mode: "paint", target, value };
+    if (target === "image") {
+      this.currentStroke = new Map();
+    }
+    this.applyPaint(pixelIndex);
     this.lastPaintedPixel = pixelIndex;
-    this.syncDocumentCanvas();
-    this.redraw();
+    this.afterPaintStep();
     window.addEventListener("mousemove", this.onWindowMouseMove);
+  }
+
+  afterPaintStep() {
+    if (this.drag.target === "mask") {
+      this.syncMaskCanvas();
+    } else {
+      this.syncDocumentCanvas();
+    }
+    this.redraw();
   }
 
   onCanvasMouseDown = (e) => {
@@ -555,7 +877,7 @@ class ImageEditor extends Component {
     if (e.button !== 0) {
       return;
     }
-    const { tool, brushColour } = this.state;
+    const { tool, brushColour, selectionMode } = this.state;
     const { screenX, screenY } = this.documentPointFromEvent(e);
     switch (tool) {
       case TOOL_PAN:
@@ -570,16 +892,34 @@ class ImageEditor extends Component {
         }
         return;
       case TOOL_BUCKET:
-        if (pixelIndex !== null && brushColour !== null) {
+        if (pixelIndex === null) {
+          return;
+        }
+        if (selectionMode) {
+          this.drag = { mode: "paint", target: "mask", value: 1 }; // so redraw shows the hatch immediately
+          this.floodFillMask(pixelIndex);
+          this.drag = null;
+          this.afterMaskChange();
+        } else if (brushColour !== null) {
           this.currentStroke = new Map();
           this.floodFill(pixelIndex, brushColour);
           this.finishStroke();
         }
         return;
+      case TOOL_ERASER:
+        if (pixelIndex !== null) {
+          this.beginPaint(pixelIndex, selectionMode ? "mask" : "image", selectionMode ? 0 : TRANSPARENT);
+        }
+        return;
       case TOOL_BRUSH:
       default:
-        if (pixelIndex !== null && brushColour !== null) {
-          this.beginPaint(pixelIndex);
+        if (pixelIndex === null) {
+          return;
+        }
+        if (selectionMode) {
+          this.beginPaint(pixelIndex, "mask", 1);
+        } else if (brushColour !== null) {
+          this.beginPaint(pixelIndex, "image", brushColour);
         }
         return;
     }
@@ -601,27 +941,33 @@ class ImageEditor extends Component {
       return;
     }
     if (this.lastPaintedPixel === null) {
-      this.setPixel(pixelIndex, this.state.brushColour);
+      this.applyPaint(pixelIndex);
     } else if (pixelIndex !== this.lastPaintedPixel) {
-      this.paintLine(this.lastPaintedPixel, pixelIndex, this.state.brushColour);
+      this.paintLine(this.lastPaintedPixel, pixelIndex);
     }
     this.lastPaintedPixel = pixelIndex;
-    this.syncDocumentCanvas();
-    this.redraw();
+    this.afterPaintStep();
   };
 
   onWindowMouseUp = () => {
     if (this.drag === null) {
       return;
     }
-    const mode = this.drag.mode;
+    const { mode, target } = this.drag;
     this.drag = null;
+    this.lastPaintedPixel = null;
     window.removeEventListener("mousemove", this.onWindowMouseMove);
-    if (mode === "paint") {
-      this.finishStroke();
-    } else {
+    if (mode === "pan") {
       this.setState({ panning: false });
+    } else if (target === "mask") {
+      this.afterMaskChange();
+    } else {
+      this.finishStroke();
     }
+  };
+
+  onToggleSelectionMode = () => {
+    this.setState((state) => ({ selectionMode: !state.selectionMode }));
   };
 
   onWheel = (e) => {
@@ -743,19 +1089,28 @@ class ImageEditor extends Component {
       materialsWorker_inProgress,
       pixelsOutsidePalette,
       panning,
+      selectionMode,
+      selectedCount,
+      clipboard,
     } = this.state;
     const palette = this.getPalette();
-    const brushKey = brushColour === null ? null : this.paletteKey(brushColour[0], brushColour[1], brushColour[2]);
+    const brushIsAir = isAir(brushColour);
+    const brushKey = brushColour === null || brushIsAir ? null : this.paletteKey(brushColour[0], brushColour[1], brushColour[2]);
     const canCopy = !mapPreviewWorker_inProgress && currentMaterialsData.pixelsData !== null && currentMaterialsData.pixelsData.length === 128 * optionValue_mapSize_x * 128 * optionValue_mapSize_y * 4;
+    const brushSwatchEntry = brushKey === null ? undefined : palette.find(({ rgb }) => this.paletteKey(rgb[0], rgb[1], rgb[2]) === brushKey);
+    const cursors = { [TOOL_BRUSH]: "crosshair", [TOOL_BUCKET]: "crosshair", [TOOL_EYEDROPPER]: "copy", [TOOL_ERASER]: "crosshair", [TOOL_PAN]: "grab", [TOOL_ZOOM]: "zoom-in" };
+    const cursor = panning ? "grabbing" : cursors[tool];
 
-    const toolButton = (toolId, labelKey) => (
-      <button className={`editorToolButton${tool === toolId ? " editorToolButton_active" : ""}`} onClick={() => this.setState({ tool: toolId })}>
-        {getLocaleString(`IMAGE-EDITOR/${labelKey}`)}
+    const toolButton = (toolId, labelKey, icon) => (
+      <button
+        key={toolId}
+        className={`editorToolButton editorIconButton${tool === toolId ? " editorToolButton_active" : ""}`}
+        title={getLocaleString(`IMAGE-EDITOR/${labelKey}`)}
+        onClick={() => this.setState({ tool: toolId })}
+      >
+        {icon}
       </button>
     );
-    const brushSwatchEntry = brushKey === null ? undefined : palette.find(({ rgb }) => this.paletteKey(rgb[0], rgb[1], rgb[2]) === brushKey);
-    const cursors = { [TOOL_BRUSH]: "crosshair", [TOOL_BUCKET]: "crosshair", [TOOL_EYEDROPPER]: "copy", [TOOL_PAN]: "grab", [TOOL_ZOOM]: "zoom-in" };
-    const cursor = panning ? "grabbing" : cursors[tool];
 
     return (
       <details className="section boxed imageEditorDiv">
@@ -772,20 +1127,30 @@ class ImageEditor extends Component {
             </button>
           </Tooltip>
           <span className="editorToolbarSpacer" />
-          {toolButton(TOOL_BRUSH, "BRUSH")}
-          {toolButton(TOOL_BUCKET, "BUCKET")}
-          {toolButton(TOOL_EYEDROPPER, "EYEDROPPER")}
-          <span
-            className={`editorSwatch editorActiveSwatch${brushColour === null ? " editorActiveSwatch_empty" : ""}`}
-            title={brushSwatchEntry === undefined ? undefined : `${brushSwatchEntry.blockName} (${brushSwatchEntry.toneKey})`}
-            style={brushColour === null ? undefined : { backgroundColor: `rgb(${brushColour[0]}, ${brushColour[1]}, ${brushColour[2]})` }}
-          />
-          <span className="editorToolbarSpacer" />
-          {toolButton(TOOL_PAN, "PAN")}
-          {toolButton(TOOL_ZOOM, "ZOOM")}
+          <button
+            className={`editorToolButton editorToggleButton${selectionMode ? " editorToggleButton_on" : ""}`}
+            onClick={this.onToggleSelectionMode}
+            aria-pressed={selectionMode}
+          >
+            {getLocaleString("IMAGE-EDITOR/SELECTION-MODE")}
+          </button>
+          {selectionMode && (
+            <button className="editorToolButton" onClick={this.onCopySelection} disabled={selectedCount === 0}>
+              {getLocaleString("IMAGE-EDITOR/COPY-SELECTION")}
+            </button>
+          )}
         </div>
 
         <div className="editorBody">
+          <div className="editorToolColumn">
+            {toolButton(TOOL_BRUSH, "BRUSH", ICONS.brush)}
+            {toolButton(TOOL_BUCKET, "BUCKET", ICONS.bucket)}
+            {toolButton(TOOL_ERASER, "ERASER", ICONS.eraser)}
+            {toolButton(TOOL_EYEDROPPER, "EYEDROPPER", ICONS.eyedropper)}
+            {toolButton(TOOL_PAN, "PAN", ICONS.pan)}
+            {toolButton(TOOL_ZOOM, "ZOOM", ICONS.zoom)}
+          </div>
+
           <div className="editorViewportColumn">
             <canvas
               className="editorCanvas"
@@ -830,21 +1195,66 @@ class ImageEditor extends Component {
               <b>{getLocaleString("IMAGE-EDITOR/PALETTE")}</b> <small className="editorPaletteNote">{getLocaleString("IMAGE-EDITOR/PALETTE-NOTE")}</small>
             </div>
             <div className="editorPalette">
-              {palette.map(({ colourSetId, toneKey, rgb, blockName }) => {
+              {this.airAvailable && (
+                <div
+                  className={`editorSwatch editorSwatch_air${brushIsAir ? " editorSwatch_selected" : ""}`}
+                  title={getLocaleString("IMAGE-EDITOR/AIR")}
+                  onClick={() => this.setState({ brushColour: TRANSPARENT })}
+                />
+              )}
+              {palette.map(({ colourSetId, toneKey, rgb, label }) => {
                 const key = this.paletteKey(rgb[0], rgb[1], rgb[2]);
                 return (
                   <div
                     key={`${colourSetId}_${toneKey}`}
                     className={`editorSwatch${key === brushKey ? " editorSwatch_selected" : ""}`}
-                    title={`${blockName} (${toneKey})`}
+                    title={label}
                     style={{ backgroundColor: `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})` }}
                     onClick={() => this.setState({ brushColour: rgb })}
                   />
                 );
               })}
             </div>
+            <div className="editorBrushColour">
+              <span
+                className={`editorSwatch editorActiveSwatch${brushColour === null ? " editorActiveSwatch_empty" : ""}${brushIsAir ? " editorSwatch_air" : ""}`}
+                title={brushIsAir ? getLocaleString("IMAGE-EDITOR/AIR") : brushSwatchEntry === undefined ? undefined : brushSwatchEntry.label}
+                style={brushColour === null || brushIsAir ? undefined : { backgroundColor: `rgb(${brushColour[0]}, ${brushColour[1]}, ${brushColour[2]})` }}
+              />
+              <small>
+                {brushColour === null
+                  ? getLocaleString("IMAGE-EDITOR/NO-COLOUR")
+                  : brushIsAir
+                  ? getLocaleString("IMAGE-EDITOR/AIR")
+                  : `${brushSwatchEntry === undefined ? "" : `${brushSwatchEntry.label} \u00b7 `}rgb(${brushColour[0]}, ${brushColour[1]}, ${brushColour[2]})`}
+              </small>
+            </div>
           </div>
         </div>
+
+        {clipboard.length > 0 && (
+          <div className="editorClipboard">
+            <b>{getLocaleString("IMAGE-EDITOR/COPIED-SELECTIONS")}</b>
+            {clipboard.map((entry) => (
+              <div key={entry.id} className="editorClipboardEntry">
+                <img
+                  className="editorClipboardThumb"
+                  src={entry.thumbnail}
+                  alt=""
+                  title={`${entry.width}x${entry.height} @ ${entry.x},${entry.y} \u00b7 ${entry.count} px`}
+                  style={entry.width >= entry.height ? { width: `${THUMBNAIL_MAX}px` } : { height: `${THUMBNAIL_MAX}px` }}
+                />
+                <span className="editorClipboardDash">{"\u2014"}</span>
+                <button className="editorToolButton" onClick={() => this.onPasteClipboardEntry(entry)}>
+                  {getLocaleString("IMAGE-EDITOR/PASTE-TO-CANVAS")}
+                </button>
+                <button className="editorToolButton editorClipboardDelete" onClick={() => this.onDeleteClipboardEntry(entry.id)} title={getLocaleString("IMAGE-EDITOR/DELETE-COPIED")}>
+                  {"\u00d7"}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="editorDownloads">
           <b>{getLocaleString("IMAGE-EDITOR/DOWNLOAD-EDITED")}</b>

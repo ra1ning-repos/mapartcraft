@@ -75,11 +75,14 @@
   "IMAGE-EDITOR": {
     "TITLE": "Image editor (BETA)",
     "SUBTITLE": "IN DEVELOPMENT—make manual edits to your dithered map here",
-    "SHORTCUTS": "Ctrl+scroll to zoom · Ctrl+drag or middle-click drag to pan · right-click to pick a colour",
+    "SHORTCUTS": "Ctrl+scroll to zoom · Ctrl+drag or middle-click drag to pan · right-click to pick a colour · in selection mode, paint and erase ur selection",
     "COPY-FROM-PREVIEW": "Open current map",
     "COPY-FROM-PREVIEW-TT": "Replace the canvas with the dithered image currently shown in the map preview (undoable)",
+    "SELECTION-MODE": "Selection mode",
+    "COPY-SELECTION": "Copy selection",
     "BRUSH": "Brush",
     "BUCKET": "Fill",
+    "ERASER": "Eraser",
     "EYEDROPPER": "Eyedropper",
     "PAN": "Pan",
     "ZOOM": "Zoom",
@@ -87,8 +90,13 @@
     "REDO": "Redo",
     "PALETTE": "Palette",
     "PALETTE-NOTE": "(based on current block selection and staircasing setting)",
+    "NO-COLOUR": "no colour selected",
+    "AIR": "Air (transparent — no block)",
+    "COPIED-SELECTIONS": "Copied selections",
+    "PASTE-TO-CANVAS": "Paste to canvas",
+    "DELETE-COPIED": "Delete this copied selection",
     "DOWNLOAD-EDITED": "Download the edited image",
-    "OUTSIDE-PALETTE": "pixels use colours the current block selection cannot produce; downloads snap them to the nearest available colour"
+    "OUTSIDE-PALETTE": "pixels use colours the current block selection cannot produce (transparent pixels count when Air is not selected), they're gonna get quantized"
   },
   "MAP-SETTINGS": {
     "TITLE": "Settings",

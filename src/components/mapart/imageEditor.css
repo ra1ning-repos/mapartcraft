@@ -41,6 +41,29 @@
   outline: 0.15em solid var(--rebaneGreen);
 }
 
+/* Toggle buttons look like plain buttons until switched on */
+.editorToggleButton_on {
+  outline: 0.15em solid var(--rebaneGreen);
+  background-color: var(--rebaneGreen);
+  color: #222;
+}
+
+/* Vertical tool bar to the left of the canvas */
+.editorToolColumn {
+  display: flex;
+  flex-direction: column;
+  row-gap: 0.3em;
+}
+
+.editorIconButton {
+  width: 2.1em;
+  height: 2.1em;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .editorBody {
   display: flex;
   flex-direction: row;
@@ -100,11 +123,53 @@
 
 .editorActiveSwatch {
   cursor: default;
-  margin-left: 0.3em;
+}
+
+/* Current colour sits under the palette with a little air above it */
+.editorBrushColour {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  column-gap: 0.5em;
+  margin-top: 0.6em;
+}
+
+/* Copied selections: thumbnail — paste button — delete, one per row */
+.editorClipboard {
+  margin-top: 0.6em;
+  display: flex;
+  flex-direction: column;
+  row-gap: 0.4em;
+}
+
+.editorClipboardEntry {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  column-gap: 0.5em;
+}
+
+.editorClipboardThumb {
+  image-rendering: pixelated;
+  background: repeating-conic-gradient(#3a3a3a 0 25%, #2a2a2a 0 50%) 0 0 / 8px 8px;
+  outline: 0.1em solid #777;
+}
+
+.editorClipboardDash {
+  opacity: 0.6;
+}
+
+.editorClipboardDelete {
+  padding: 0.15em 0.5em;
 }
 
 .editorActiveSwatch_empty {
   background: repeating-linear-gradient(45deg, #444 0 4px, #333 4px 8px);
+}
+
+/* The Air (transparent) swatch: a checkerboard, matching what transparent pixels look like on the canvas */
+.editorSwatch_air {
+  background: repeating-conic-gradient(#3a3a3a 0 25%, #2a2a2a 0 50%) 0 0 / 10px 10px;
 }
 
 .editorPaletteNote {
