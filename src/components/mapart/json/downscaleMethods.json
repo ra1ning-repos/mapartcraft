@@ -1,0 +1,17 @@
+{
+  "AREA_AVERAGE": {
+    "uniqueId": 0,
+    "localeKey": "MAP-SETTINGS/DOWNSCALING/AREA-AVERAGE",
+    "workerMethod": "box"
+  },
+  "LANCZOS3": {
+    "uniqueId": 1,
+    "localeKey": "MAP-SETTINGS/DOWNSCALING/LANCZOS3",
+    "workerMethod": "lanczos3"
+  },
+  "POINT": {
+    "uniqueId": 2,
+    "localeKey": "MAP-SETTINGS/DOWNSCALING/POINT",
+    "workerMethod": "point"
+  }
+}

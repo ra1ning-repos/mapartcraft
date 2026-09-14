@@ -68,6 +68,12 @@
     "TITLE": "Map preview",
     "BEST-RESOLUTION-TT": "A source image with this resolution will work the best",
     "ASPECT-RATIO-MISMATCH-TT": "Image doesn't match map's aspect ratio",
+    "RESAMPLE-UP": "larger, nearest neighbour",
+    "RESAMPLE-DOWN-BOX": "smaller, area averaged",
+    "RESAMPLE-DOWN-LANCZOS3": "smaller, Lanczos-3",
+    "RESAMPLE-DOWN-POINT": "smaller, point sampled",
+    "RESAMPLE-MIXED": "stretched: nearest neighbour / downscaled",
+    "RESAMPLE-GAMMA": "gamma-correct",
     "SCALE-MINUS-TT": "Make preview smaller",
     "SCALE-PLUS-TT": "Make preview bigger",
     "GENERATING-CURVE": "Generating space-filling curve…"
@@ -106,6 +112,15 @@
       "CENTER": "Center",
       "MANUAL": "Manual",
       "ZOOM": "Zoom"
+    },
+    "DOWNSCALING": {
+      "TITLE": "Downscaling",
+      "TITLE-TT": "How the image is shrunk to map resolution",
+      "AREA-AVERAGE": "Area average",
+      "LANCZOS3": "Lanczos-3",
+      "POINT": "Point sampling (for pixelart)",
+      "GAMMA-CORRECT": "Gamma-correct averaging",
+      "GAMMA-CORRECT-TT": "Average in linear light instead of sRGB values, so fine high-contrast texture keeps its brightness when shrunk. Has no effect on point sampling."
     },
     "GRID-OVERLAY": "Grid",
     "GRID-OVERLAY-TT": "Overlays a grid that shows 16x16 chunks and 1x1 splits",

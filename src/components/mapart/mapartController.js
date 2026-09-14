@@ -12,6 +12,7 @@ import coloursJSON from "./json/coloursJSON.json";
 import BackgroundColourModes from "./json/backgroundColourModes.json";
 import ColourMethods from "./json/colourMethods.json";
 import CropModes from "./json/cropModes.json";
+import DownscaleMethods from "./json/downscaleMethods.json";
 import DefaultPresets from "./json/defaultPresets.json";
 import DitherMethods from "./json/ditherMethods.json";
 import MapModes from "./json/mapModes.json";
@@ -37,6 +38,8 @@ class MapartController extends Component {
     optionValue_cropImage_percent_x: 50,
     optionValue_cropImage_percent_y: 50,
     optionValue_showGridOverlay: false,
+    optionValue_downscaleMethod: DownscaleMethods.AREA_AVERAGE.uniqueId,
+    optionValue_gammaCorrectAveraging: false,
     optionValue_staircasing: MapModes.SCHEMATIC_NBT.staircaseModes.VALLEY.uniqueId,
     optionValue_whereSupportBlocks: WhereSupportBlocksModes.ALL_OPTIMIZED.uniqueId,
     optionValue_supportBlock: "cobblestone",
@@ -365,6 +368,14 @@ class MapartController extends Component {
     this.setState({
       optionValue_cropImage_percent_y: value,
     });
+  };
+
+  onOptionChange_downscaleMethod = (e) => {
+    this.setState({ optionValue_downscaleMethod: parseInt(e.target.value) });
+  };
+
+  onOptionChange_gammaCorrectAveraging = () => {
+    this.setState({ optionValue_gammaCorrectAveraging: !this.state.optionValue_gammaCorrectAveraging });
   };
 
   onOptionChange_showGridOverlay = () => {
@@ -876,6 +887,8 @@ class MapartController extends Component {
       optionValue_cropImage_percent_x,
       optionValue_cropImage_percent_y,
       optionValue_showGridOverlay,
+      optionValue_downscaleMethod,
+      optionValue_gammaCorrectAveraging,
       optionValue_staircasing,
       optionValue_whereSupportBlocks,
       optionValue_supportBlock,
@@ -932,6 +945,10 @@ class MapartController extends Component {
             onOptionChange_cropImage_percent_y={this.onOptionChange_cropImage_percent_y}
             optionValue_showGridOverlay={optionValue_showGridOverlay}
             onOptionChange_showGridOverlay={this.onOptionChange_showGridOverlay}
+            optionValue_downscaleMethod={optionValue_downscaleMethod}
+            onOptionChange_downscaleMethod={this.onOptionChange_downscaleMethod}
+            optionValue_gammaCorrectAveraging={optionValue_gammaCorrectAveraging}
+            onOptionChange_gammaCorrectAveraging={this.onOptionChange_gammaCorrectAveraging}
             optionValue_staircasing={optionValue_staircasing}
             onOptionChange_staircasing={this.onOptionChange_staircasing}
             optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
@@ -994,6 +1011,8 @@ class MapartController extends Component {
             optionValue_cropImage_zoom={optionValue_cropImage_zoom}
             optionValue_cropImage_percent_x={optionValue_cropImage_percent_x}
             optionValue_cropImage_percent_y={optionValue_cropImage_percent_y}
+            optionValue_downscaleMethod={optionValue_downscaleMethod}
+            optionValue_gammaCorrectAveraging={optionValue_gammaCorrectAveraging}
             optionValue_staircasing={optionValue_staircasing}
             optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
             optionValue_supportBlock={optionValue_supportBlock}
@@ -1040,6 +1059,8 @@ class MapartController extends Component {
               optionValue_cropImage_percent_x={optionValue_cropImage_percent_x}
               optionValue_cropImage_percent_y={optionValue_cropImage_percent_y}
               optionValue_showGridOverlay={optionValue_showGridOverlay}
+              optionValue_downscaleMethod={optionValue_downscaleMethod}
+              optionValue_gammaCorrectAveraging={optionValue_gammaCorrectAveraging}
               optionValue_staircasing={optionValue_staircasing}
               optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
               optionValue_transparency={optionValue_transparency}

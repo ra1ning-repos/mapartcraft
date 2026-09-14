@@ -4,10 +4,12 @@ import Tooltip from "../tooltip";
 import WorkerBuilder from './workers/worker-builder';
 import MapCanvasWorker from "./workers/mapCanvas";
 import ContextualCurveWorker from "./workers/contextualCurve";
+import ResampleWorker from "./workers/resample";
 
 import BackgroundColourModes from "./json/backgroundColourModes.json";
 import ColourMethods from "./json/colourMethods.json";
 import CropModes from "./json/cropModes.json";
+import DownscaleMethods from "./json/downscaleMethods.json";
 import DitherMethods from "./json/ditherMethods.json";
 import MapModes from "./json/mapModes.json";
 import WhereSupportBlocksModes from "./json/whereSupportBlocksModes.json";
@@ -24,6 +26,7 @@ class MapPreview extends Component {
     workerProgress: 0,
     curveGenerating: false,
     curveProgress: 0,
+    resampleInfo: null, // { methodX, methodY, scaleX, scaleY, gammaCorrect } for the readout under the preview
   };
 
   mapCanvasWorker = new WorkerBuilder(MapCanvasWorker);
@@ -34,6 +37,18 @@ class MapPreview extends Component {
   // image and the canvas geometry, not on preprocessing or any other setting, so it is generated
   // once and reused until the image, map size or crop changes.
   curveCache = { key: null, order: null };
+
+  // Scaling the uploaded image to map resolution is done by our own worker rather than drawImage(), so
+  // the result is the same in every browser: nearest neighbour when enlarging, the user's chosen method
+  // when shrinking (see workers/resample.js). The worker holds the full-resolution pixels for the current
+  // image; each request only carries the crop rectangle, output size and method. Results are cached by
+  // geometry + method, so preprocessing changes never trigger a resample.
+  resampleWorker = null;
+  resampleWorkerImage = null; // the uploadedImage the worker currently holds
+  resampleRequestId = 0;
+  resampleInFlight = null; // { requestId, key } while a request is out
+  resamplePendingKey = null; // newest key wanted, sent once the in-flight request returns
+  resampledCache = { key: null, canvas: null };
 
   constructor(props) {
     super(props);
@@ -53,6 +68,8 @@ class MapPreview extends Component {
       prevProps.optionValue_cropImage_zoom === newProps.optionValue_cropImage_zoom,
       prevProps.optionValue_cropImage_percent_x === newProps.optionValue_cropImage_percent_x,
       prevProps.optionValue_cropImage_percent_y === newProps.optionValue_cropImage_percent_y,
+      prevProps.optionValue_downscaleMethod === newProps.optionValue_downscaleMethod,
+      prevProps.optionValue_gammaCorrectAveraging === newProps.optionValue_gammaCorrectAveraging,
       prevProps.optionValue_staircasing === newProps.optionValue_staircasing,
       prevProps.optionValue_preprocessingEnabled === newProps.optionValue_preprocessingEnabled,
       prevProps.preProcessingValue_brightness === newProps.preProcessingValue_brightness,
@@ -71,6 +88,7 @@ class MapPreview extends Component {
       prevState.workerProgress === newState.workerProgress &&
       prevState.curveGenerating === newState.curveGenerating &&
       prevState.curveProgress === newState.curveProgress &&
+      prevState.resampleInfo === newState.resampleInfo &&
       !propChanges.every((elt) => {
         return elt === true;
       })
@@ -90,6 +108,8 @@ class MapPreview extends Component {
       prevProps.optionValue_cropImage_zoom === newProps.optionValue_cropImage_zoom,
       prevProps.optionValue_cropImage_percent_x === newProps.optionValue_cropImage_percent_x,
       prevProps.optionValue_cropImage_percent_y === newProps.optionValue_cropImage_percent_y,
+      prevProps.optionValue_downscaleMethod === newProps.optionValue_downscaleMethod,
+      prevProps.optionValue_gammaCorrectAveraging === newProps.optionValue_gammaCorrectAveraging,
       prevProps.optionValue_staircasing === newProps.optionValue_staircasing,
       prevProps.optionValue_whereSupportBlocks === newProps.optionValue_whereSupportBlocks,
       prevProps.optionValue_transparency === newProps.optionValue_transparency,
@@ -117,6 +137,7 @@ class MapPreview extends Component {
       prevState.workerProgress === newState.workerProgress &&
       prevState.curveGenerating === newState.curveGenerating &&
       prevState.curveProgress === newState.curveProgress &&
+      prevState.resampleInfo === newState.resampleInfo &&
       !propChanges.every((elt) => {
         return elt === true;
       })
@@ -221,11 +242,10 @@ class MapPreview extends Component {
       preProcessingValue_backgroundColour,
     } = this.props;
     const { canvasRef_source } = this;
+    if (this.getResampledCanvas() === null) {
+      return; // the resample worker is on it; the whole pipeline re-runs when the result lands
+    }
     const ctx_source = canvasRef_source.current.getContext("2d");
-    ctx_source.imageSmoothingEnabled = true;   // These two options keep the map preview consistent on Chrome(ium). Otherwise the first render after changing
-    ctx_source.imageSmoothingQuality = "high"; // map x or z size is pixelated to a noticeably lower quality. This is not a solution to the cause but a
-                                               // workaround the effect (I do not know exactly why this happens: maybe it is to do with
-                                               // anti-fingerprinting). Firefox is unaffected by any of this.
     ctx_source.clearRect(0, 0, ctx_source.canvas.width, ctx_source.canvas.height);
 
     if (optionValue_preprocessingEnabled) {
@@ -256,64 +276,176 @@ class MapPreview extends Component {
     }
   }
 
-  // Draws the uploaded image onto a context of canvas size, honouring the crop settings. Whatever
-  // filter the context has set is applied by drawImage as usual, so the source canvas gets the
-  // preprocessing filter and the curve generator's scratch canvas gets none.
+  // Draws the (already resampled) uploaded image onto a context of canvas size at 1:1. Whatever filter
+  // the context has set is applied by drawImage as usual, so the source canvas gets the preprocessing
+  // filter and the curve generator's scratch canvas gets none. Never scales, so the browser's
+  // interpolation heuristics never enter into it.
   drawUploadedImageToContext(ctx_source) {
-    const {
-      optionValue_mapSize_x,
-      optionValue_mapSize_y,
-      optionValue_cropImage,
-      optionValue_cropImage_zoom,
-      optionValue_cropImage_percent_x,
-      optionValue_cropImage_percent_y,
-      uploadedImage,
-    } = this.props;
+    const resampled = this.getResampledCanvas();
+    if (resampled !== null) {
+      ctx_source.drawImage(resampled, 0, 0);
+    }
+  }
+
+  // The crop rectangle of the uploaded image that maps onto the canvas, in source pixels.
+  computeSourceRect() {
+    const { optionValue_mapSize_x, optionValue_mapSize_y, optionValue_cropImage, optionValue_cropImage_zoom, optionValue_cropImage_percent_x, optionValue_cropImage_percent_y, uploadedImage } =
+      this.props;
+    const img_width = uploadedImage.naturalWidth || uploadedImage.width;
+    const img_height = uploadedImage.naturalHeight || uploadedImage.height;
     switch (optionValue_cropImage) {
       case CropModes.OFF.uniqueId: {
-        ctx_source.drawImage(uploadedImage, 0, 0, ctx_source.canvas.width, ctx_source.canvas.height);
-        break;
+        return { x: 0, y: 0, width: img_width, height: img_height };
       }
       case CropModes.CENTER.uniqueId:
       case CropModes.MANUAL.uniqueId: {
-        const img_width = uploadedImage.width;
-        const img_height = uploadedImage.height;
         let samplingWidth;
         let samplingHeight;
-        let samplingOffset_x;
-        let samplingOffset_y;
         if (img_width * optionValue_mapSize_y > img_height * optionValue_mapSize_x) {
           // image w/h greater than canvas w/h
           samplingWidth = Math.floor((10 * img_height * optionValue_mapSize_x) / (optionValue_mapSize_y * optionValue_cropImage_zoom));
           // the 10 is because the input is from 10 to 50 in steps of 1; scale down by 10
           samplingHeight = Math.floor((10 * img_height) / optionValue_cropImage_zoom);
-          samplingOffset_x = Math.floor((optionValue_cropImage_percent_x * (img_width - samplingWidth)) / 100);
-          samplingOffset_y = Math.floor((optionValue_cropImage_percent_y * (img_height - samplingHeight)) / 100);
         } else {
           // image w/h leq canvas w/h
           samplingWidth = Math.floor((10 * img_width) / optionValue_cropImage_zoom);
           samplingHeight = Math.floor((10 * img_width * optionValue_mapSize_y) / (optionValue_mapSize_x * optionValue_cropImage_zoom));
-          samplingOffset_x = Math.floor((optionValue_cropImage_percent_x * (img_width - samplingWidth)) / 100);
-          samplingOffset_y = Math.floor((optionValue_cropImage_percent_y * (img_height - samplingHeight)) / 100);
         }
-        ctx_source.drawImage(
-          uploadedImage,
-          samplingOffset_x,
-          samplingOffset_y,
-          samplingWidth,
-          samplingHeight,
-          0,
-          0,
-          ctx_source.canvas.width,
-          ctx_source.canvas.height
-        );
-        break;
+        return {
+          x: Math.floor((optionValue_cropImage_percent_x * (img_width - samplingWidth)) / 100),
+          y: Math.floor((optionValue_cropImage_percent_y * (img_height - samplingHeight)) / 100),
+          width: samplingWidth,
+          height: samplingHeight,
+        };
       }
       default: {
         throw new Error("Unknown optionValue_cropImage");
       }
     }
   }
+
+  // Everything the resampled image depends on. Preprocessing is deliberately absent.
+  resampleKey() {
+    const {
+      uploadedImage,
+      optionValue_mapSize_x,
+      optionValue_mapSize_y,
+      optionValue_cropImage,
+      optionValue_cropImage_zoom,
+      optionValue_cropImage_percent_x,
+      optionValue_cropImage_percent_y,
+      optionValue_downscaleMethod,
+      optionValue_gammaCorrectAveraging,
+    } = this.props;
+    return {
+      uploadedImage,
+      optionValue_mapSize_x,
+      optionValue_mapSize_y,
+      optionValue_cropImage,
+      optionValue_cropImage_zoom,
+      optionValue_cropImage_percent_x,
+      optionValue_cropImage_percent_y,
+      optionValue_downscaleMethod,
+      optionValue_gammaCorrectAveraging,
+    };
+  }
+
+  // Returns the canvas holding the resampled image for the current key, or null after kicking off the
+  // worker request that will produce it.
+  getResampledCanvas() {
+    const key = this.resampleKey();
+    if (this.resampledCache.canvas !== null && this.curveKeysMatch(this.resampledCache.key, key)) {
+      return this.resampledCache.canvas;
+    }
+    this.requestResample(key);
+    return null;
+  }
+
+  ensureResampleWorker() {
+    const { uploadedImage } = this.props;
+    if (this.resampleWorker !== null && this.resampleWorkerImage === uploadedImage) {
+      return;
+    }
+    if (this.resampleWorker !== null) {
+      this.resampleWorker.terminate();
+    }
+    // Read the full-resolution pixels once and hand them to the worker for keeps.
+    const width = uploadedImage.naturalWidth || uploadedImage.width;
+    const height = uploadedImage.naturalHeight || uploadedImage.height;
+    const scratch = document.createElement("canvas");
+    scratch.width = width;
+    scratch.height = height;
+    const ctx = scratch.getContext("2d");
+    ctx.drawImage(uploadedImage, 0, 0);
+    const pixels = ctx.getImageData(0, 0, width, height);
+    this.resampleWorker = new WorkerBuilder(ResampleWorker);
+    this.resampleWorker.onmessage = this.onResampleWorkerMessage;
+    this.resampleWorker.postMessage({ head: "SOURCE", body: { width: width, height: height, data: pixels.data } }, [pixels.data.buffer]);
+    this.resampleWorkerImage = uploadedImage;
+    this.resampleInFlight = null;
+    this.resamplePendingKey = null;
+  }
+
+  // One request out at a time; while it runs, only the newest key is remembered. A slider drag therefore
+  // costs at most one wasted resample rather than a queue of them.
+  requestResample(key) {
+    this.ensureResampleWorker();
+    if (this.resampleInFlight !== null) {
+      if (!this.curveKeysMatch(this.resampleInFlight.key, key)) {
+        this.resamplePendingKey = key;
+      }
+      return;
+    }
+    this.sendResample(key);
+  }
+
+  sendResample(key) {
+    const rect = this.computeSourceRect();
+    const method = Object.values(DownscaleMethods).find((downscaleMethod) => downscaleMethod.uniqueId === key.optionValue_downscaleMethod);
+    const requestId = ++this.resampleRequestId;
+    this.resampleInFlight = { requestId, key };
+    this.resamplePendingKey = null;
+    this.resampleWorker.postMessage({
+      head: "RESAMPLE",
+      body: {
+        requestId: requestId,
+        sourceX: rect.x,
+        sourceY: rect.y,
+        sourceWidth: rect.width,
+        sourceHeight: rect.height,
+        outputWidth: 128 * key.optionValue_mapSize_x,
+        outputHeight: 128 * key.optionValue_mapSize_y,
+        downscaleMethod: method.workerMethod,
+        gammaCorrect: key.optionValue_gammaCorrectAveraging,
+      },
+    });
+  }
+
+  onResampleWorkerMessage = (e) => {
+    if (e.data.head !== "RESAMPLED" || this.resampleInFlight === null || e.data.body.requestId !== this.resampleInFlight.requestId) {
+      return;
+    }
+    const { key } = this.resampleInFlight;
+    this.resampleInFlight = null;
+    const { width, height, data, methodX, methodY, scaleX, scaleY, gammaCorrect } = e.data.body;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext("2d").putImageData(new ImageData(data, width, height), 0, 0);
+    this.resampledCache = { key, canvas };
+    this.setState({ resampleInfo: { methodX, methodY, scaleX, scaleY, gammaCorrect } });
+    if (this.resamplePendingKey !== null) {
+      const pending = this.resamplePendingKey;
+      this.resamplePendingKey = null;
+      this.sendResample(pending);
+      return;
+    }
+    // Now that the image for the current key exists, run the pipeline that was waiting on it.
+    if (this.props.uploadedImage !== null && this.curveKeysMatch(key, this.resampleKey())) {
+      this.updateCanvas_source();
+      this.updateCanvas_display();
+    }
+  };
 
   // Levels, gamma and sharpening cannot be expressed as canvas filter functions, so they run as a
   // pixel pass over the source canvas once the image has been drawn (and after the brightness /
@@ -441,8 +573,6 @@ class MapPreview extends Component {
     scratchCanvas.width = width;
     scratchCanvas.height = height;
     const ctx_scratch = scratchCanvas.getContext("2d");
-    ctx_scratch.imageSmoothingEnabled = true;
-    ctx_scratch.imageSmoothingQuality = "high";
     ctx_scratch.filter = "none";
     this.drawUploadedImageToContext(ctx_scratch);
     const rawImageData = ctx_scratch.getImageData(0, 0, width, height);
@@ -476,6 +606,9 @@ class MapPreview extends Component {
 
   updateCanvas_display() {
     this.mapCanvasWorker.terminate();
+    if (this.resampledCache.canvas === null || !this.curveKeysMatch(this.resampledCache.key, this.resampleKey())) {
+      return; // source canvas is stale until the resample lands; onResampleWorkerMessage re-runs us
+    }
     const { canvasRef_source } = this;
     const { optionValue_dithering } = this.props;
     const ctx_source = canvasRef_source.current.getContext("2d");
@@ -590,6 +723,25 @@ class MapPreview extends Component {
     if (this.curveWorker !== null) {
       this.curveWorker.terminate();
     }
+    if (this.resampleWorker !== null) {
+      this.resampleWorker.terminate();
+    }
+  }
+
+  // e.g. "31.3x smaller, area averaged, gamma-correct" / "2x larger, nearest neighbour"
+  describeResample({ methodX, methodY, scaleX, scaleY, gammaCorrect }) {
+    const { getLocaleString } = this.props;
+    const factor = (scale) => (scale >= 1 ? scale : 1 / scale);
+    const fmt = (v) => (Number.isInteger(v) ? v.toString() : v.toFixed(1));
+    const gammaSuffix = gammaCorrect ? `, ${getLocaleString("MAP-PREVIEW/RESAMPLE-GAMMA")}` : "";
+    if (methodX === "nearest" && methodY === "nearest") {
+      return `${fmt(factor(Math.min(scaleX, scaleY)))}x ${getLocaleString("MAP-PREVIEW/RESAMPLE-UP")}`;
+    }
+    if (methodX !== methodY) {
+      return `${getLocaleString("MAP-PREVIEW/RESAMPLE-MIXED")}${gammaSuffix}`;
+    }
+    const downKey = { box: "RESAMPLE-DOWN-BOX", lanczos3: "RESAMPLE-DOWN-LANCZOS3", point: "RESAMPLE-DOWN-POINT" }[methodX];
+    return `${fmt(factor(Math.max(scaleX, scaleY)))}x ${getLocaleString(`MAP-PREVIEW/${downKey}`)}${gammaSuffix}`;
   }
 
   render() {
@@ -602,7 +754,7 @@ class MapPreview extends Component {
       onFileDialogEvent,
       uploadedImage,
     } = this.props;
-    const { mapPreviewSizeScale, workerProgress, curveGenerating, curveProgress } = this.state;
+    const { mapPreviewSizeScale, workerProgress, curveGenerating, curveProgress, resampleInfo } = this.state;
     return (
       <div className="section mapPreviewDiv">
         <h2>{getLocaleString("MAP-PREVIEW/TITLE")}</h2>
@@ -657,6 +809,7 @@ class MapPreview extends Component {
                 {uploadedImage === null ? null : `${uploadedImage.width.toString()}x${uploadedImage.height.toString()}`}
               </small>
             </Tooltip>
+            {resampleInfo !== null && <small className="resampleInfo">{this.describeResample(resampleInfo)}</small>}
           </div>
           <div>
             <Tooltip tooltipText={getLocaleString("MAP-PREVIEW/SCALE-PLUS-TT")}>

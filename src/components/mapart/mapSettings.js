@@ -8,6 +8,7 @@ import Tooltip from "../tooltip";
 
 import BackgroundColourModes from "./json/backgroundColourModes.json";
 import CropModes from "./json/cropModes.json";
+import DownscaleMethods from "./json/downscaleMethods.json";
 import ColourMethods from "./json/colourMethods.json";
 import DitherMethods from "./json/ditherMethods.json";
 import MapModes from "./json/mapModes.json";
@@ -40,6 +41,10 @@ class MapSettings extends Component {
       onOptionChange_cropImage_percent_y,
       optionValue_showGridOverlay,
       onOptionChange_showGridOverlay,
+      optionValue_downscaleMethod,
+      onOptionChange_downscaleMethod,
+      optionValue_gammaCorrectAveraging,
+      onOptionChange_gammaCorrectAveraging,
       optionValue_staircasing,
       onOptionChange_staircasing,
       optionValue_whereSupportBlocks,
@@ -269,6 +274,37 @@ class MapSettings extends Component {
           </tbody>
         </table>
       </div>
+    );
+    const setting_downscaling = (
+      <React.Fragment>
+        <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/DOWNSCALING/TITLE-TT")}>
+          <b>
+            {getLocaleString("MAP-SETTINGS/DOWNSCALING/TITLE")}
+            {":"}
+          </b>
+        </Tooltip>{" "}
+        <select onChange={onOptionChange_downscaleMethod} value={optionValue_downscaleMethod}>
+          {Object.values(DownscaleMethods).map((downscaleMethod) => (
+            <option key={downscaleMethod.uniqueId} value={downscaleMethod.uniqueId}>
+              {getLocaleString(downscaleMethod.localeKey)}
+            </option>
+          ))}
+        </select>
+        <br />
+        <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/DOWNSCALING/GAMMA-CORRECT-TT")}>
+          <b>
+            {getLocaleString("MAP-SETTINGS/DOWNSCALING/GAMMA-CORRECT")}
+            {":"}
+          </b>
+        </Tooltip>{" "}
+        <input
+          type="checkbox"
+          checked={optionValue_gammaCorrectAveraging}
+          onChange={onOptionChange_gammaCorrectAveraging}
+          disabled={optionValue_downscaleMethod === DownscaleMethods.POINT.uniqueId}
+        />
+        <br />
+      </React.Fragment>
     );
     const setting_grid = (
       <React.Fragment>
@@ -1066,6 +1102,7 @@ class MapSettings extends Component {
         {setting_version}
         {setting_mapSize}
         {settingGroup_cropping}
+        {setting_downscaling}
         {setting_grid}
         {setting_staircasing}
         {settings_mapModeConditional}
