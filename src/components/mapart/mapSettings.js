@@ -71,6 +71,9 @@ class MapSettings extends Component {
       onOptionChange_dithering_propagation_blue,
       optionValue_dithering_boustrophedon,
       onOptionChange_dithering_boustrophedon,
+      onOptionChange_dithering_strength,
+      optionValue_dithering_advancedStrength,
+      onOptionChange_dithering_advancedStrength,
       optionValue_preprocessingEnabled,
       onOptionChange_PreProcessingEnabled,
       preProcessingValue_brightness,
@@ -546,6 +549,65 @@ class MapSettings extends Component {
         <br />
       </React.Fragment>
     );
+    // One slider for all three channels. The channels are kept equal while this is shown, so red stands in for the value.
+    const setting_dithering_strength = (
+      <tr>
+        <th>
+          <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/DITHERING/STRENGTH-TT")}>
+            <b>
+              {getLocaleString("MAP-SETTINGS/DITHERING/STRENGTH")}
+              {":"}
+            </b>
+          </Tooltip>{" "}
+        </th>
+        <td>
+          <input
+            type="range"
+            min="0"
+            max="200"
+            value={optionValue_dithering_propagation_red}
+            onChange={(e) => onOptionChange_dithering_strength(parseInt(e.target.value))}
+          />
+        </td>
+        <td>
+          <BufferedNumberInput
+            min="0"
+            max="200"
+            step="1"
+            value={optionValue_dithering_propagation_red}
+            validators={[(t) => !isNaN(t), (t) => t >= 0, (t) => t <= 200]}
+            onValidInput={onOptionChange_dithering_strength}
+            style={{ width: "3em" }}
+          />
+        </td>
+        <td>
+          <button
+            className="resetToDefaultButton"
+            title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
+            onClick={() => onOptionChange_dithering_strength(SettingDefaults.optionValue_dithering_propagation_red)}
+            disabled={optionValue_dithering_propagation_red === SettingDefaults.optionValue_dithering_propagation_red}
+          >
+            {"↺"}
+          </button>
+        </td>
+      </tr>
+    );
+    const setting_dithering_advancedStrength = (
+      <tr>
+        <th>
+          <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/DITHERING/ADVANCED-STRENGTH-TT")}>
+            <b>
+              {getLocaleString("MAP-SETTINGS/DITHERING/ADVANCED-STRENGTH")}
+              {":"}
+            </b>
+          </Tooltip>{" "}
+        </th>
+        <td>
+          <input type="checkbox" checked={optionValue_dithering_advancedStrength} onChange={onOptionChange_dithering_advancedStrength} />
+        </td>
+        <td />
+      </tr>
+    );
     const setting_dithering_propagation_red = (
       <tr>
         <th>
@@ -686,9 +748,15 @@ class MapSettings extends Component {
       <div>
         <table>
           <tbody>
-            {setting_dithering_propagation_red}
-            {setting_dithering_propagation_green}
-            {setting_dithering_propagation_blue}
+            {optionValue_dithering_advancedStrength ? (
+              <React.Fragment>
+                {setting_dithering_propagation_red}
+                {setting_dithering_propagation_green}
+                {setting_dithering_propagation_blue}
+              </React.Fragment>
+            ) : (
+              setting_dithering_strength
+            )}
           </tbody>
         </table>
       </div>
@@ -1102,6 +1170,7 @@ class MapSettings extends Component {
               {setting_downscaleMethod}
               {setting_gammaCorrectAveraging}
               {setting_dithering_boustrophedon}
+              {setting_dithering_advancedStrength}
               {setting_extras_moreStaircasingOptions}
             </tbody>
           </table>

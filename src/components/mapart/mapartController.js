@@ -53,6 +53,7 @@ class MapartController extends Component {
     optionValue_dithering_propagation_green: SettingDefaults.optionValue_dithering_propagation_green,
     optionValue_dithering_propagation_blue: SettingDefaults.optionValue_dithering_propagation_blue,
     optionValue_dithering_boustrophedon: true,
+    optionValue_dithering_advancedStrength: false, // show red / green / blue propagation separately instead of one strength slider
     optionValue_preprocessingEnabled: false,
     preProcessingValue_brightness: SettingDefaults.preProcessingValue_brightness,
     preProcessingValue_contrast: SettingDefaults.preProcessingValue_contrast,
@@ -436,6 +437,32 @@ class MapartController extends Component {
 
   onOptionChange_dithering_propagation_blue = (value) => {
     this.setState({ optionValue_dithering_propagation_blue: value });
+  };
+
+  // The single "Dither strength" slider drives all three channel propagations together.
+  onOptionChange_dithering_strength = (value) => {
+    this.setState({
+      optionValue_dithering_propagation_red: value,
+      optionValue_dithering_propagation_green: value,
+      optionValue_dithering_propagation_blue: value,
+    });
+  };
+
+  onOptionChange_dithering_advancedStrength = () => {
+    const { optionValue_dithering_advancedStrength, optionValue_dithering_propagation_red, optionValue_dithering_propagation_green, optionValue_dithering_propagation_blue } = this.state;
+    if (optionValue_dithering_advancedStrength) {
+      // three sliders -> one: collapse to their average so the single slider reflects what was set
+      const average = Math.round((optionValue_dithering_propagation_red + optionValue_dithering_propagation_green + optionValue_dithering_propagation_blue) / 3);
+      this.setState({
+        optionValue_dithering_advancedStrength: false,
+        optionValue_dithering_propagation_red: average,
+        optionValue_dithering_propagation_green: average,
+        optionValue_dithering_propagation_blue: average,
+      });
+    } else {
+      // one -> three: the channels are already equal to the single value, nothing to redistribute
+      this.setState({ optionValue_dithering_advancedStrength: true });
+    }
   };
 
   onOptionChange_dithering_boustrophedon = () => {
@@ -902,6 +929,7 @@ class MapartController extends Component {
       optionValue_dithering_propagation_green,
       optionValue_dithering_propagation_blue,
       optionValue_dithering_boustrophedon,
+      optionValue_dithering_advancedStrength,
       optionValue_preprocessingEnabled,
       preProcessingValue_brightness,
       preProcessingValue_contrast,
@@ -975,6 +1003,9 @@ class MapartController extends Component {
             onOptionChange_dithering_propagation_blue={this.onOptionChange_dithering_propagation_blue}
             optionValue_dithering_boustrophedon={optionValue_dithering_boustrophedon}
             onOptionChange_dithering_boustrophedon={this.onOptionChange_dithering_boustrophedon}
+            onOptionChange_dithering_strength={this.onOptionChange_dithering_strength}
+            optionValue_dithering_advancedStrength={optionValue_dithering_advancedStrength}
+            onOptionChange_dithering_advancedStrength={this.onOptionChange_dithering_advancedStrength}
             optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
             onOptionChange_PreProcessingEnabled={this.onOptionChange_PreProcessingEnabled}
             preProcessingValue_brightness={preProcessingValue_brightness}

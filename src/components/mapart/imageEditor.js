@@ -115,6 +115,7 @@ class ImageEditor extends Component {
     selectionMode: false, // brush / fill / eraser act on the selection mask instead of the picture
     selectedCount: 0, // number of pixels currently in the selection mask
     clipboard: [], // copied selections: { id, x, y, width, height, pixels, mask, count, thumbnail }
+    copyStatus: null, // "copied" | "downloaded" briefly after the Copy image button, else null
     revision: 0, // bumped on every change so the palette/warnings re-render
   };
 
@@ -136,6 +137,7 @@ class ImageEditor extends Component {
   lastPaintedPixel = null;
   materialsWorker = null;
   materialsTimer = null;
+  copyStatusTimer = null;
   unmounted = false;
 
   componentDidMount() {
@@ -190,6 +192,7 @@ class ImageEditor extends Component {
       this.canvasRef.current.removeEventListener("wheel", this.onWheel);
     }
     clearTimeout(this.materialsTimer);
+    clearTimeout(this.copyStatusTimer);
     if (this.materialsWorker !== null) {
       this.materialsWorker.terminate();
     }
@@ -967,8 +970,38 @@ class ImageEditor extends Component {
   };
 
   onToggleSelectionMode = () => {
+    if (this.state.selectionMode) {
+      this.clearSelection(); // a selection only means something while you are in the mode that made it
+    }
     this.setState((state) => ({ selectionMode: !state.selectionMode }));
   };
+
+  // Puts the document on the system clipboard as a PNG at map resolution (a 1x1 map is a 128x128 image;
+  // no viewport zoom involved). The ClipboardItem is handed a promise and write() is called synchronously
+  // inside the click, which is what Safari needs to treat it as a user gesture. Browsers without the API
+  // get the same PNG as a download instead, so the button always yields the image somewhere.
+  onCopyImage = () => {
+    const pngBlob = () => new Promise((resolve) => this.documentCanvas.toBlob(resolve, "image/png"));
+    const fallbackDownload = async () => {
+      const { uploadedImage_baseFilename, downloadBlobFile } = this.props;
+      downloadBlobFile(await pngBlob(), `${uploadedImage_baseFilename === null ? "mapart" : uploadedImage_baseFilename}_edited.png`);
+      this.flashCopyStatus("downloaded");
+    };
+    if (typeof ClipboardItem === "undefined" || !navigator.clipboard || typeof navigator.clipboard.write !== "function") {
+      fallbackDownload();
+      return;
+    }
+    navigator.clipboard
+      .write([new ClipboardItem({ "image/png": pngBlob() })])
+      .then(() => this.flashCopyStatus("copied"))
+      .catch(() => fallbackDownload());
+  };
+
+  flashCopyStatus(status) {
+    clearTimeout(this.copyStatusTimer);
+    this.setState({ copyStatus: status });
+    this.copyStatusTimer = setTimeout(() => this.setState({ copyStatus: null }), 1800);
+  }
 
   onWheel = (e) => {
     if (!(e.ctrlKey || e.metaKey)) {
@@ -1092,6 +1125,7 @@ class ImageEditor extends Component {
       selectionMode,
       selectedCount,
       clipboard,
+      copyStatus,
     } = this.state;
     const palette = this.getPalette();
     const brushIsAir = isAir(brushColour);
@@ -1163,6 +1197,13 @@ class ImageEditor extends Component {
             />
             <div className="editorUnderCanvas">
               <small>{`${canvasWidth.toString()}x${canvasHeight.toString()} \u00b7 ${Math.round(zoom * 100).toString()}%`}</small>
+              <button className="editorToolButton" onClick={this.onCopyImage} title={getLocaleString("IMAGE-EDITOR/COPY-IMAGE-TT")}>
+                {copyStatus === "copied"
+                  ? getLocaleString("IMAGE-EDITOR/COPY-IMAGE-DONE")
+                  : copyStatus === "downloaded"
+                  ? getLocaleString("IMAGE-EDITOR/COPY-IMAGE-DOWNLOADED")
+                  : getLocaleString("IMAGE-EDITOR/COPY-IMAGE")}
+              </button>
               <div className="editorHistoryButtons">
                 <button className="editorToolButton" onClick={this.undo} disabled={undoDepth === 0} title={getLocaleString("IMAGE-EDITOR/UNDO")}>
                   {"\u21b6"}
@@ -1195,13 +1236,6 @@ class ImageEditor extends Component {
               <b>{getLocaleString("IMAGE-EDITOR/PALETTE")}</b> <small className="editorPaletteNote">{getLocaleString("IMAGE-EDITOR/PALETTE-NOTE")}</small>
             </div>
             <div className="editorPalette">
-              {this.airAvailable && (
-                <div
-                  className={`editorSwatch editorSwatch_air${brushIsAir ? " editorSwatch_selected" : ""}`}
-                  title={getLocaleString("IMAGE-EDITOR/AIR")}
-                  onClick={() => this.setState({ brushColour: TRANSPARENT })}
-                />
-              )}
               {palette.map(({ colourSetId, toneKey, rgb, label }) => {
                 const key = this.paletteKey(rgb[0], rgb[1], rgb[2]);
                 return (
@@ -1214,6 +1248,13 @@ class ImageEditor extends Component {
                   />
                 );
               })}
+              {this.airAvailable && (
+                <div
+                  className={`editorSwatch editorSwatch_air${brushIsAir ? " editorSwatch_selected" : ""}`}
+                  title={getLocaleString("IMAGE-EDITOR/AIR")}
+                  onClick={() => this.setState({ brushColour: TRANSPARENT })}
+                />
+              )}
             </div>
             <div className="editorBrushColour">
               <span
