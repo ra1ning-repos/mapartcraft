@@ -47,6 +47,7 @@ class MapSettings extends Component {
       onOptionChange_gammaCorrectAveraging,
       optionValue_staircasing,
       onOptionChange_staircasing,
+      onOptionChange_staircasingCheckbox,
       optionValue_whereSupportBlocks,
       onOptionChange_WhereSupportBlocks,
       optionValue_supportBlock,
@@ -74,6 +75,10 @@ class MapSettings extends Component {
       onOptionChange_dithering_strength,
       optionValue_dithering_advancedStrength,
       onOptionChange_dithering_advancedStrength,
+      optionValue_moreDitheringOptions,
+      onOptionChange_moreDitheringOptions,
+      optionValue_moreColourspaceOptions,
+      onOptionChange_moreColourspaceOptions,
       optionValue_preprocessingEnabled,
       onOptionChange_PreProcessingEnabled,
       preProcessingValue_brightness,
@@ -120,22 +125,25 @@ class MapSettings extends Component {
       </tr>
     );
     const setting_version = (
-      <React.Fragment>
-        <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/VERSION-TT")}>
-          <b>
-            {getLocaleString("MAP-SETTINGS/VERSION")}
-            {":"}
-          </b>
-        </Tooltip>{" "}
-        <select value={optionValue_version.MCVersion} onChange={onOptionChange_version}>
-          {Object.values(SupportedVersions).map((supportedVersion) => (
-            <option key={supportedVersion.MCVersion} value={supportedVersion.MCVersion}>
-              {supportedVersion.MCVersion}
-            </option>
-          ))}
-        </select>
-        <br />
-      </React.Fragment>
+      <tr>
+        <th>
+          <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/VERSION-TT")}>
+            <b>
+              {getLocaleString("MAP-SETTINGS/VERSION")}
+              {":"}
+            </b>
+          </Tooltip>{" "}
+        </th>
+        <td>
+          <select value={optionValue_version.MCVersion} onChange={onOptionChange_version}>
+            {Object.values(SupportedVersions).map((supportedVersion) => (
+              <option key={supportedVersion.MCVersion} value={supportedVersion.MCVersion}>
+                {supportedVersion.MCVersion}
+              </option>
+            ))}
+          </select>
+        </td>
+      </tr>
     );
     const setting_mapSize = (
       <React.Fragment>
@@ -266,18 +274,6 @@ class MapSettings extends Component {
         </tr>
       );
     }
-    let settingGroup_cropping = (
-      <div className={optionValue_cropImage === CropModes.MANUAL.uniqueId ? "settingsGroup" : null}>
-        <table>
-          <tbody>
-            {setting_crop}
-            {setting_crop_zoom}
-            {setting_crop_percent_x}
-            {setting_crop_percent_y}
-          </tbody>
-        </table>
-      </div>
-    );
     const setting_downscaleMethod = (
       <tr>
         <th>
@@ -320,16 +316,19 @@ class MapSettings extends Component {
       </tr>
     );
     const setting_grid = (
-      <React.Fragment>
-        <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/GRID-OVERLAY-TT")}>
-          <b>
-            {getLocaleString("MAP-SETTINGS/GRID-OVERLAY")}
-            {":"}
-          </b>
-        </Tooltip>{" "}
-        <input type="checkbox" checked={optionValue_showGridOverlay} onChange={onOptionChange_showGridOverlay} />
-        <br />
-      </React.Fragment>
+      <tr>
+        <th>
+          <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/GRID-OVERLAY-TT")}>
+            <b>
+              {getLocaleString("MAP-SETTINGS/GRID-OVERLAY")}
+              {":"}
+            </b>
+          </Tooltip>{" "}
+        </th>
+        <td>
+          <input type="checkbox" checked={optionValue_showGridOverlay} onChange={onOptionChange_showGridOverlay} />
+        </td>
+      </tr>
     );
     const setting_staircasing = (
       <React.Fragment>
@@ -339,28 +338,39 @@ class MapSettings extends Component {
             {":"}
           </b>
         </Tooltip>{" "}
-        <select onChange={onOptionChange_staircasing} value={optionValue_staircasing}>
-          {Object.values(
-            optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId ? MapModes.SCHEMATIC_NBT.staircaseModes : MapModes.MAPDAT.staircaseModes
-          )
-            .filter((staircaseMode) => optionValue_extras_moreStaircasingOptions || !staircaseMode.extra)
-            .map((staircaseMode) => (
+        {optionValue_extras_moreStaircasingOptions ? (
+          <select onChange={onOptionChange_staircasing} value={optionValue_staircasing}>
+            {Object.values(
+              optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId ? MapModes.SCHEMATIC_NBT.staircaseModes : MapModes.MAPDAT.staircaseModes
+            ).map((staircaseMode) => (
               <option key={staircaseMode.uniqueId} value={staircaseMode.uniqueId}>
                 {getLocaleString(staircaseMode.localeKey)}
               </option>
             ))}
-        </select>
+          </select>
+        ) : (
+          <input
+            type="checkbox"
+            checked={
+              optionValue_staircasing !==
+              (optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId ? MapModes.SCHEMATIC_NBT.staircaseModes.OFF.uniqueId : MapModes.MAPDAT.staircaseModes.OFF.uniqueId)
+            }
+            onChange={onOptionChange_staircasingCheckbox}
+          />
+        )}
         <br />
       </React.Fragment>
     );
-    let settings_mapModeConditional;
-    if (optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId) {
-      settings_mapModeConditional = (
-        <React.Fragment>
+    const isNBT = optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId;
+    const setting_whereSupportBlocks = isNBT ? (
+      <tr>
+        <th>
           <b>
             {getLocaleString("MAP-SETTINGS/NBT-SPECIFIC/WHERE-SUPPORT-BLOCKS/TITLE")}
             {":"}
           </b>{" "}
+        </th>
+        <td>
           <select value={optionValue_whereSupportBlocks} onChange={onOptionChange_WhereSupportBlocks}>
             {Object.values(WhereSupportBlocksModes).map((whereSupportBlocksMode) => (
               <option key={whereSupportBlocksMode.uniqueId} value={whereSupportBlocksMode.uniqueId}>
@@ -368,21 +378,29 @@ class MapSettings extends Component {
               </option>
             ))}
           </select>
-          <br />
+        </td>
+      </tr>
+    ) : null;
+    const setting_supportBlock = isNBT ? (
+      <tr>
+        <th>
           <b>
             {getLocaleString("MAP-SETTINGS/NBT-SPECIFIC/SUPPORT-BLOCK-TO-ADD")}
             {":"}
           </b>{" "}
+        </th>
+        <td>
           <AutoCompleteInputBlockToAdd
             coloursJSON={coloursJSON}
             value={optionValue_supportBlock}
             setValue={setOption_SupportBlock}
             optionValue_version={optionValue_version}
           />
-          <br />
-        </React.Fragment>
-      );
-    } else {
+        </td>
+      </tr>
+    ) : null;
+    let settings_mapModeConditional = null;
+    if (!isNBT) {
       let setting_transparency = (
         <tr>
           <th>
@@ -518,16 +536,33 @@ class MapSettings extends Component {
           </b>
         </Tooltip>{" "}
         <select value={optionValue_betterColour} onChange={onOptionChange_BetterColour}>
-          {Object.keys(ColourMethods).map((colourMethodKey) => (
-            <option key={ColourMethods[colourMethodKey]["uniqueId"]} value={ColourMethods[colourMethodKey]["uniqueId"]}>
-              {"localeKey" in ColourMethods[colourMethodKey]
-                ? getLocaleString(ColourMethods[colourMethodKey]["localeKey"])
-                : ColourMethods[colourMethodKey]["name"]}
-            </option>
-          ))}
+          {Object.keys(ColourMethods)
+            .filter((colourMethodKey) => optionValue_moreColourspaceOptions || ColourMethods[colourMethodKey].simple === true)
+            .map((colourMethodKey) => (
+              <option key={ColourMethods[colourMethodKey]["uniqueId"]} value={ColourMethods[colourMethodKey]["uniqueId"]}>
+                {"localeKey" in ColourMethods[colourMethodKey]
+                  ? getLocaleString(ColourMethods[colourMethodKey]["localeKey"])
+                  : ColourMethods[colourMethodKey]["name"]}
+              </option>
+            ))}
         </select>
         <br />
       </React.Fragment>
+    );
+    const setting_moreColourspaceOptions = (
+      <tr>
+        <th>
+          <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/BETTER-COLOUR-MORE-TT")}>
+            <b>
+              {getLocaleString("MAP-SETTINGS/BETTER-COLOUR-MORE")}
+              {":"}
+            </b>
+          </Tooltip>{" "}
+        </th>
+        <td>
+          <input type="checkbox" checked={optionValue_moreColourspaceOptions} onChange={onOptionChange_moreColourspaceOptions} />
+        </td>
+      </tr>
     );
     const setting_dithering = (
       <React.Fragment>
@@ -538,14 +573,25 @@ class MapSettings extends Component {
           </b>
         </Tooltip>{" "}
         <select value={optionValue_dithering} onChange={onOptionChange_dithering}>
-          {Object.keys(DitherMethods).map((ditherMethodKey) => (
-            <option key={DitherMethods[ditherMethodKey]["uniqueId"]} value={DitherMethods[ditherMethodKey]["uniqueId"]}>
-              {"localeKey" in DitherMethods[ditherMethodKey]
-                ? getLocaleString(DitherMethods[ditherMethodKey]["localeKey"])
-                : DitherMethods[ditherMethodKey]["name"]}
+          {(optionValue_moreDitheringOptions
+            ? Object.values(DitherMethods)
+            : Object.values(DitherMethods)
+                .filter((ditherMethod) => "simpleOrder" in ditherMethod)
+                .sort((a, b) => a.simpleOrder - b.simpleOrder)
+          ).map((ditherMethod) => (
+            <option key={ditherMethod.uniqueId} value={ditherMethod.uniqueId}>
+              {"localeKey" in ditherMethod ? getLocaleString(ditherMethod.localeKey) : optionValue_moreDitheringOptions ? ditherMethod.name : ditherMethod.simpleName}
             </option>
           ))}
         </select>
+        <br />
+        <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/DITHERING/MORE-OPTIONS-TT")}>
+          <b>
+            {getLocaleString("MAP-SETTINGS/DITHERING/MORE-OPTIONS")}
+            {":"}
+          </b>
+        </Tooltip>{" "}
+        <input type="checkbox" checked={optionValue_moreDitheringOptions} onChange={onOptionChange_moreDitheringOptions} />
         <br />
       </React.Fragment>
     );
@@ -1166,12 +1212,21 @@ class MapSettings extends Component {
           <summary>{getLocaleString("MAP-SETTINGS/EXTRAS/TITLE")}</summary>
           <table>
             <tbody>
+              {setting_version}
+              {setting_crop}
+              {setting_crop_zoom}
+              {setting_crop_percent_x}
+              {setting_crop_percent_y}
+              {setting_grid}
+              {setting_whereSupportBlocks}
+              {setting_supportBlock}
               {setting_mode}
               {setting_downscaleMethod}
-              {setting_gammaCorrectAveraging}
-              {setting_dithering_boustrophedon}
               {setting_dithering_advancedStrength}
               {setting_extras_moreStaircasingOptions}
+              {setting_moreColourspaceOptions}
+              {setting_gammaCorrectAveraging}
+              {setting_dithering_boustrophedon}
             </tbody>
           </table>
         </details>
@@ -1180,10 +1235,7 @@ class MapSettings extends Component {
     const settingsDiv = (
       <div className="section boxed settingsDiv">
         <h2>{getLocaleString("MAP-SETTINGS/TITLE")}</h2>
-        {setting_version}
         {setting_mapSize}
-        {settingGroup_cropping}
-        {setting_grid}
         {setting_staircasing}
         {settings_mapModeConditional}
         {setting_betterColour}

@@ -9,6 +9,7 @@
   },
   "Cie76_Lab65": {
     "uniqueId": 2,
+    "simple": true,
     "name": "CIE76 D65 (L*a*b* space)"
   },
   "Cie76_Lab50": {
@@ -25,6 +26,7 @@
   },
   "Hct": {
     "uniqueId": 6,
+    "simple": true,
     "name": "HCT (Hue, Chroma, Tone)"
   }
 }

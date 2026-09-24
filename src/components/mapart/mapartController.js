@@ -24,6 +24,16 @@ import IMG_Upload from "../../images/upload.png";
 
 import "./mapartController.css";
 
+// The only things remembered between visits are the "show me more options" toggles: which detail
+// panels are revealed, never which option is picked. Stored in localStorage as one small JSON object.
+const UI_TOGGLES_STORAGE_KEY = "mapartcraft_uiToggles";
+const UI_TOGGLE_KEYS = [
+  "optionValue_moreDitheringOptions",
+  "optionValue_extras_moreStaircasingOptions",
+  "optionValue_moreColourspaceOptions",
+  "optionValue_dithering_advancedStrength",
+];
+
 class MapartController extends Component {
   state = {
     coloursJSON: null,
@@ -40,7 +50,7 @@ class MapartController extends Component {
     optionValue_showGridOverlay: false,
     optionValue_downscaleMethod: DownscaleMethods.AREA_AVERAGE.uniqueId,
     optionValue_gammaCorrectAveraging: true,
-    optionValue_staircasing: MapModes.SCHEMATIC_NBT.staircaseModes.VALLEY.uniqueId,
+    optionValue_staircasing: MapModes.SCHEMATIC_NBT.staircaseModes.CLASSIC.uniqueId,
     optionValue_whereSupportBlocks: WhereSupportBlocksModes.ALL_OPTIMIZED.uniqueId,
     optionValue_supportBlock: "cobblestone",
     optionValue_transparency: false,
@@ -54,6 +64,8 @@ class MapartController extends Component {
     optionValue_dithering_propagation_blue: SettingDefaults.optionValue_dithering_propagation_blue,
     optionValue_dithering_boustrophedon: true,
     optionValue_dithering_advancedStrength: false, // show red / green / blue propagation separately instead of one strength slider
+    optionValue_moreDitheringOptions: false, // every dither method and sharpen variant, instead of the short list
+    optionValue_moreColourspaceOptions: false, // every colour distance metric, instead of HCT / CIE76 D65
     optionValue_preprocessingEnabled: false,
     preProcessingValue_brightness: SettingDefaults.preProcessingValue_brightness,
     preProcessingValue_contrast: SettingDefaults.preProcessingValue_contrast,
@@ -110,6 +122,8 @@ class MapartController extends Component {
     if (supportedVersionFound !== undefined) {
       this.state.optionValue_version = supportedVersionFound;
     }
+
+    Object.assign(this.state, this.loadUiToggles());
 
     // Start with every block selected rather than an empty selection.
     const startingPreset = this.getEverythingPreset();
@@ -307,9 +321,9 @@ class MapartController extends Component {
     const mode = parseInt(e.target.value);
     this.setState({ optionValue_modeNBTOrMapdat: mode });
     if (mode === MapModes.SCHEMATIC_NBT.uniqueId) {
-      this.setState({ optionValue_staircasing: MapModes.SCHEMATIC_NBT.staircaseModes.VALLEY.uniqueId });
+      this.setState({ optionValue_staircasing: MapModes.SCHEMATIC_NBT.staircaseModes.CLASSIC.uniqueId });
     } else {
-      this.setState({ optionValue_staircasing: MapModes.MAPDAT.staircaseModes.ON_UNOBTAINABLE.uniqueId });
+      this.setState({ optionValue_staircasing: MapModes.MAPDAT.staircaseModes.ON.uniqueId });
     }
   };
 
@@ -459,9 +473,11 @@ class MapartController extends Component {
         optionValue_dithering_propagation_green: average,
         optionValue_dithering_propagation_blue: average,
       });
+      this.saveUiToggles({ optionValue_dithering_advancedStrength: false });
     } else {
       // one -> three: the channels are already equal to the single value, nothing to redistribute
       this.setState({ optionValue_dithering_advancedStrength: true });
+      this.saveUiToggles({ optionValue_dithering_advancedStrength: true });
     }
   };
 
@@ -553,16 +569,88 @@ class MapartController extends Component {
     this.setState({ preProcessingValue_backgroundColour: newValue });
   };
 
+  loadUiToggles() {
+    try {
+      const raw = window.localStorage.getItem(UI_TOGGLES_STORAGE_KEY);
+      if (raw === null) {
+        return {};
+      }
+      const parsed = JSON.parse(raw);
+      const toggles = {};
+      for (const key of UI_TOGGLE_KEYS) {
+        if (typeof parsed[key] === "boolean") {
+          toggles[key] = parsed[key]; // anything unknown or malformed just keeps its default
+        }
+      }
+      return toggles;
+    } catch (e) {
+      return {}; // storage disabled, private mode, corrupt JSON: behave as a first visit
+    }
+  }
+
+  saveUiToggles(changes) {
+    try {
+      const toggles = { version: 1 };
+      for (const key of UI_TOGGLE_KEYS) {
+        toggles[key] = key in changes ? changes[key] : this.state[key];
+      }
+      window.localStorage.setItem(UI_TOGGLES_STORAGE_KEY, JSON.stringify(toggles));
+    } catch (e) {
+      // nothing to do: the toggles still work for this visit
+    }
+  }
+
+  // The staircasing checkbox: "off" is OFF, "on" is Classic (NBT) or On (map.dat).
+  simpleStaircaseModes() {
+    if (this.state.optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId) {
+      return { off: MapModes.SCHEMATIC_NBT.staircaseModes.OFF, on: MapModes.SCHEMATIC_NBT.staircaseModes.CLASSIC };
+    }
+    return { off: MapModes.MAPDAT.staircaseModes.OFF, on: MapModes.MAPDAT.staircaseModes.ON };
+  }
+
+  onOptionChange_staircasingCheckbox = () => {
+    const { off, on } = this.simpleStaircaseModes();
+    this.setState({ optionValue_staircasing: this.state.optionValue_staircasing === off.uniqueId ? on.uniqueId : off.uniqueId });
+  };
+
   onOptionChange_extras_moreStaircasingOptions = () => {
-    const { optionValue_modeNBTOrMapdat, optionValue_extras_moreStaircasingOptions } = this.state;
-    this.setState({ optionValue_extras_moreStaircasingOptions: !optionValue_extras_moreStaircasingOptions });
-    if (optionValue_extras_moreStaircasingOptions) {
-      if (optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId) {
-        this.setState({ optionValue_staircasing: MapModes.SCHEMATIC_NBT.staircaseModes.VALLEY.uniqueId });
-      } else {
-        this.setState({ optionValue_staircasing: MapModes.MAPDAT.staircaseModes.ON_UNOBTAINABLE.uniqueId });
+    const next = !this.state.optionValue_extras_moreStaircasingOptions;
+    const update = { optionValue_extras_moreStaircasingOptions: next };
+    if (!next) {
+      // back to the checkbox: anything other than "off" collapses onto the checkbox's "on" mode
+      const { off, on } = this.simpleStaircaseModes();
+      if (this.state.optionValue_staircasing !== off.uniqueId) {
+        update.optionValue_staircasing = on.uniqueId;
       }
     }
+    this.setState(update);
+    this.saveUiToggles(update);
+  };
+
+  onOptionChange_moreDitheringOptions = () => {
+    const next = !this.state.optionValue_moreDitheringOptions;
+    const update = { optionValue_moreDitheringOptions: next };
+    if (!next) {
+      const current = Object.values(DitherMethods).find((ditherMethod) => ditherMethod.uniqueId === this.state.optionValue_dithering);
+      if (current === undefined || !("simpleOrder" in current)) {
+        update.optionValue_dithering = DitherMethods.FloydSteinberg_24.uniqueId; // the hidden pick would have no entry to show
+      }
+    }
+    this.setState(update);
+    this.saveUiToggles(update);
+  };
+
+  onOptionChange_moreColourspaceOptions = () => {
+    const next = !this.state.optionValue_moreColourspaceOptions;
+    const update = { optionValue_moreColourspaceOptions: next };
+    if (!next) {
+      const current = Object.values(ColourMethods).find((colourMethod) => colourMethod.uniqueId === this.state.optionValue_betterColour);
+      if (current === undefined || current.simple !== true) {
+        update.optionValue_betterColour = ColourMethods.Hct.uniqueId;
+      }
+    }
+    this.setState(update);
+    this.saveUiToggles(update);
   };
 
   downloadBlobFile(downloadBlob, filename) {
@@ -930,6 +1018,8 @@ class MapartController extends Component {
       optionValue_dithering_propagation_blue,
       optionValue_dithering_boustrophedon,
       optionValue_dithering_advancedStrength,
+      optionValue_moreDitheringOptions,
+      optionValue_moreColourspaceOptions,
       optionValue_preprocessingEnabled,
       preProcessingValue_brightness,
       preProcessingValue_contrast,
@@ -979,6 +1069,7 @@ class MapartController extends Component {
             onOptionChange_gammaCorrectAveraging={this.onOptionChange_gammaCorrectAveraging}
             optionValue_staircasing={optionValue_staircasing}
             onOptionChange_staircasing={this.onOptionChange_staircasing}
+            onOptionChange_staircasingCheckbox={this.onOptionChange_staircasingCheckbox}
             optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
             onOptionChange_WhereSupportBlocks={this.onOptionChange_WhereSupportBlocks}
             optionValue_supportBlock={optionValue_supportBlock}
@@ -1006,6 +1097,10 @@ class MapartController extends Component {
             onOptionChange_dithering_strength={this.onOptionChange_dithering_strength}
             optionValue_dithering_advancedStrength={optionValue_dithering_advancedStrength}
             onOptionChange_dithering_advancedStrength={this.onOptionChange_dithering_advancedStrength}
+            optionValue_moreDitheringOptions={optionValue_moreDitheringOptions}
+            onOptionChange_moreDitheringOptions={this.onOptionChange_moreDitheringOptions}
+            optionValue_moreColourspaceOptions={optionValue_moreColourspaceOptions}
+            onOptionChange_moreColourspaceOptions={this.onOptionChange_moreColourspaceOptions}
             optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
             onOptionChange_PreProcessingEnabled={this.onOptionChange_PreProcessingEnabled}
             preProcessingValue_brightness={preProcessingValue_brightness}

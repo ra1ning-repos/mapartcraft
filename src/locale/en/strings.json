@@ -132,7 +132,7 @@
     "GRID-OVERLAY-TT": "Overlays a grid that shows 16x16 chunks and 1x1 splits",
     "3D": {
       "TITLE": "Staircasing",
-      "TITLE-TT": "Makes the map 3D. Harder to build, but 3 times the colors!",
+      "TITLE-TT": "Makes the map 3D. Harder to build, but 3 times the colors! Ticked is the classic staircase; more modes are in Advanced options.",
       "OFF": "Off (2D)",
       "CLASSIC": "On (Classic)",
       "VALLEY": "On (Valley)",
@@ -169,16 +169,20 @@
     },
     "BETTER-COLOUR": "Colorspace",
     "BETTER-COLOUR-TT": "How the difference (distance) between colors is calculated",
+    "BETTER-COLOUR-MORE": "More colourspace options",
+    "BETTER-COLOUR-MORE-TT": "Show every colour distance metric, not just HCT and CIE76 D65",
     "RESET-TO-DEFAULT": "Reset to default",
     "DITHERING": {
       "TITLE": "Dithering",
       "TITLE-TT": "Adds seemingly random pixels for the illusion of more colors",
+      "MORE-OPTIONS": "More dithering options",
+      "MORE-OPTIONS-TT": "Show every dither method and every sharpen variant",
       "NONE": "None",
       "BOUSTROPHEDON": "Boustrophedonic error diffusion",
       "BOUSTROPHEDON-TT": "Alternate the scan direction on every other row; reduces the diagonal streaking error diffusion can produce. No effect on ordered dithers.",
       "STRENGTH": "Dither strength",
       "STRENGTH-TT": "How much of each pixel’s colour error is carried into its neighbours",
-      "ADVANCED-STRENGTH": "Advanced dither strength options",
+      "ADVANCED-STRENGTH": "More dither strength options",
       "ADVANCED-STRENGTH-TT": "Set the dither strength for red, green and blue separately",
       "PROPAGATION-RED": "Red propagation",
       "PROPAGATION-GREEN": "Green propagation",
@@ -210,8 +214,8 @@
     },
     "EXTRAS": {
       "TITLE": "Advanced options",
-      "MORE-STAIRCASING-OPTIONS": "More Staircasing Options",
-      "MORE-STAIRCASING-OPTIONS-TT": "Full-Dark, Full-Light, and Full-Unobtainable options"
+      "MORE-STAIRCASING-OPTIONS": "More staircasing options",
+      "MORE-STAIRCASING-OPTIONS-TT": "Show every staircasing mode as a dropdown instead of the on/off checkbox"
     }
   },
   "DOWNLOAD": {
