@@ -116,6 +116,7 @@ class ImageEditor extends Component {
     selectedCount: 0, // number of pixels currently in the selection mask
     clipboard: [], // copied selections: { id, x, y, width, height, pixels, mask, count, thumbnail }
     copyStatus: null, // "copied" | "downloaded" briefly after the Copy image button, else null
+    openedBaseFilename: null, // base filename of the image that was last opened into the editor
     revision: 0, // bumped on every change so the palette/warnings re-render
   };
 
@@ -817,7 +818,14 @@ class ImageEditor extends Component {
     const after = new ImageData(new Uint8ClampedArray(currentMaterialsData.pixelsData), width, height);
     this.applySnapshot(after);
     this.pushHistory({ type: "snapshot", before, after });
+    this.setState({ openedBaseFilename: this.props.uploadedImage_baseFilename });
   };
+
+  // The name of the image that was opened into the editor, falling back to the current upload.
+  editedBaseFilename() {
+    const base = typeof this.state.openedBaseFilename === "string" ? this.state.openedBaseFilename : this.props.uploadedImage_baseFilename;
+    return base === null || base === undefined ? "mapart" : base;
+  }
 
   // ---------------------------------------------------------------- mouse and keyboard
 
@@ -983,8 +991,8 @@ class ImageEditor extends Component {
   onCopyImage = () => {
     const pngBlob = () => new Promise((resolve) => this.documentCanvas.toBlob(resolve, "image/png"));
     const fallbackDownload = async () => {
-      const { uploadedImage_baseFilename, downloadBlobFile } = this.props;
-      downloadBlobFile(await pngBlob(), `${uploadedImage_baseFilename === null ? "mapart" : uploadedImage_baseFilename}_edited.png`);
+      const { downloadBlobFile } = this.props;
+      downloadBlobFile(await pngBlob(), `${this.editedBaseFilename()}.png`);
       this.flashCopyStatus("downloaded");
     };
     if (typeof ClipboardItem === "undefined" || !navigator.clipboard || typeof navigator.clipboard.write !== "function") {
@@ -1108,7 +1116,7 @@ class ImageEditor extends Component {
   // ---------------------------------------------------------------- render
 
   render() {
-    const { getLocaleString, currentMaterialsData, mapPreviewWorker_inProgress, optionValue_mapSize_x, optionValue_mapSize_y, uploadedImage_baseFilename } = this.props;
+    const { getLocaleString, currentMaterialsData, mapPreviewWorker_inProgress, optionValue_mapSize_x, optionValue_mapSize_y } = this.props;
     const {
       tool,
       brushColour,
@@ -1306,7 +1314,7 @@ class ImageEditor extends Component {
             {...this.props}
             optionValue_mapSize_x={canvasWidth / 128}
             optionValue_mapSize_y={canvasHeight / 128}
-            uploadedImage_baseFilename={`${uploadedImage_baseFilename === null ? "mapart" : uploadedImage_baseFilename}_edited`}
+            uploadedImage_baseFilename={this.editedBaseFilename()}
             currentMaterialsData={editorMaterialsData}
             mapPreviewWorker_inProgress={materialsWorker_inProgress || editorMaterialsData.pixelsData === null}
           />

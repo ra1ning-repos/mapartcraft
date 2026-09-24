@@ -70,7 +70,6 @@ class MapPreview extends Component {
       prevProps.optionValue_downscaleMethod === newProps.optionValue_downscaleMethod,
       prevProps.optionValue_gammaCorrectAveraging === newProps.optionValue_gammaCorrectAveraging,
       prevProps.optionValue_staircasing === newProps.optionValue_staircasing,
-      prevProps.optionValue_preprocessingEnabled === newProps.optionValue_preprocessingEnabled,
       prevProps.preProcessingValue_brightness === newProps.preProcessingValue_brightness,
       prevProps.preProcessingValue_contrast === newProps.preProcessingValue_contrast,
       prevProps.preProcessingValue_saturation === newProps.preProcessingValue_saturation,
@@ -118,7 +117,6 @@ class MapPreview extends Component {
       prevProps.optionValue_dithering_propagation_green === newProps.optionValue_dithering_propagation_green,
       prevProps.optionValue_dithering_propagation_blue === newProps.optionValue_dithering_propagation_blue,
       prevProps.optionValue_dithering_boustrophedon === newProps.optionValue_dithering_boustrophedon,
-      prevProps.optionValue_preprocessingEnabled === newProps.optionValue_preprocessingEnabled,
       prevProps.preProcessingValue_brightness === newProps.preProcessingValue_brightness,
       prevProps.preProcessingValue_contrast === newProps.preProcessingValue_contrast,
       prevProps.preProcessingValue_saturation === newProps.preProcessingValue_saturation,
@@ -231,7 +229,6 @@ class MapPreview extends Component {
   updateCanvas_source() {
     const {
       selectedBlocks,
-      optionValue_preprocessingEnabled,
       preProcessingValue_brightness,
       preProcessingValue_contrast,
       preProcessingValue_saturation,
@@ -245,32 +242,26 @@ class MapPreview extends Component {
     const ctx_source = canvasRef_source.current.getContext("2d");
     ctx_source.clearRect(0, 0, ctx_source.canvas.width, ctx_source.canvas.height);
 
-    if (optionValue_preprocessingEnabled) {
-      if (preProcessingValue_backgroundColourSelect !== BackgroundColourModes.OFF.uniqueId && /^#?[a-f\d]{6}$/i.test(preProcessingValue_backgroundColour)) {
-        let backgroundColour;
-        if (
-          preProcessingValue_backgroundColourSelect === BackgroundColourModes.SMOOTH.uniqueId &&
-          !Object.values(selectedBlocks).every((selectedBlockId) => selectedBlockId === "-1")
-        ) {
-          backgroundColour = this.closestSmoothColourTo(preProcessingValue_backgroundColour);
-        } else {
-          backgroundColour = preProcessingValue_backgroundColour;
-        }
-        ctx_source.filter = "none"; // this needs to be present to stop filters affecting background colour
-        ctx_source.rect(0, 0, ctx_source.canvas.width, ctx_source.canvas.height);
-        ctx_source.fillStyle = backgroundColour;
-        ctx_source.fill();
+    // Preprocessing is always in effect; at the default slider values the filter and the pixel pass are identities.
+    if (preProcessingValue_backgroundColourSelect !== BackgroundColourModes.OFF.uniqueId && /^#?[a-f\d]{6}$/i.test(preProcessingValue_backgroundColour)) {
+      let backgroundColour;
+      if (
+        preProcessingValue_backgroundColourSelect === BackgroundColourModes.SMOOTH.uniqueId &&
+        !Object.values(selectedBlocks).every((selectedBlockId) => selectedBlockId === "-1")
+      ) {
+        backgroundColour = this.closestSmoothColourTo(preProcessingValue_backgroundColour);
+      } else {
+        backgroundColour = preProcessingValue_backgroundColour;
       }
-      ctx_source.filter = `brightness(${preProcessingValue_brightness}%) contrast(${preProcessingValue_contrast}%) saturate(${preProcessingValue_saturation}%)`;
-    } else {
-      ctx_source.filter = "none";
+      ctx_source.filter = "none"; // this needs to be present to stop filters affecting background colour
+      ctx_source.rect(0, 0, ctx_source.canvas.width, ctx_source.canvas.height);
+      ctx_source.fillStyle = backgroundColour;
+      ctx_source.fill();
     }
+    ctx_source.filter = `brightness(${preProcessingValue_brightness}%) contrast(${preProcessingValue_contrast}%) saturate(${preProcessingValue_saturation}%)`;
 
     this.drawUploadedImageToContext(ctx_source);
-
-    if (optionValue_preprocessingEnabled) {
-      this.applyPreProcessingPixelPass(ctx_source);
-    }
+    this.applyPreProcessingPixelPass(ctx_source);
   }
 
   // Draws the (already resampled) uploaded image onto a context of canvas size at 1:1. Whatever filter

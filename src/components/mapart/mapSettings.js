@@ -79,8 +79,6 @@ class MapSettings extends Component {
       onOptionChange_moreDitheringOptions,
       optionValue_moreColourspaceOptions,
       onOptionChange_moreColourspaceOptions,
-      optionValue_preprocessingEnabled,
-      onOptionChange_PreProcessingEnabled,
       preProcessingValue_brightness,
       onOptionChange_PreProcessingBrightness,
       preProcessingValue_contrast,
@@ -274,6 +272,18 @@ class MapSettings extends Component {
         </tr>
       );
     }
+    const settingGroup_cropping = (
+      <div className={optionValue_cropImage === CropModes.MANUAL.uniqueId ? "settingsGroup" : null}>
+        <table>
+          <tbody>
+            {setting_crop}
+            {setting_crop_zoom}
+            {setting_crop_percent_x}
+            {setting_crop_percent_y}
+          </tbody>
+        </table>
+      </div>
+    );
     const setting_downscaleMethod = (
       <tr>
         <th>
@@ -809,15 +819,8 @@ class MapSettings extends Component {
     );
     const setting_preprocessing = (
       <tr>
-        <th>
-          <b>
-            {getLocaleString("MAP-SETTINGS/PREPROCESSING/ENABLE")}
-            {":"}
-          </b>{" "}
-          <input type="checkbox" checked={optionValue_preprocessingEnabled} onChange={onOptionChange_PreProcessingEnabled} />
-        </th>
-        <td colSpan="3">
-          <button className="resetToDefaultButton" onClick={onOptionChange_PreProcessingResetAll} disabled={!optionValue_preprocessingEnabled}>
+        <td colSpan="4">
+          <button className="resetToDefaultButton" onClick={onOptionChange_PreProcessingResetAll}>
             {getLocaleString("MAP-SETTINGS/PREPROCESSING/RESET-ALL")}
           </button>
         </td>
@@ -838,7 +841,6 @@ class MapSettings extends Component {
             max="200"
             value={preProcessingValue_brightness}
             onChange={(e) => onOptionChange_PreProcessingBrightness(parseInt(e.target.value))}
-            disabled={!optionValue_preprocessingEnabled}
           />
         </td>
         <td>
@@ -849,7 +851,6 @@ class MapSettings extends Component {
             value={preProcessingValue_brightness}
             validators={[(t) => !isNaN(t), (t) => t >= 0, (t) => t <= 200]}
             onValidInput={onOptionChange_PreProcessingBrightness}
-            disabled={!optionValue_preprocessingEnabled}
             style={{ width: "3em" }}
           />
         </td>
@@ -858,7 +859,7 @@ class MapSettings extends Component {
             className="resetToDefaultButton"
             title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
             onClick={() => onOptionChange_PreProcessingBrightness(SettingDefaults.preProcessingValue_brightness)}
-            disabled={!optionValue_preprocessingEnabled || preProcessingValue_brightness === SettingDefaults.preProcessingValue_brightness}
+            disabled={preProcessingValue_brightness === SettingDefaults.preProcessingValue_brightness}
           >
             {"↺"}
           </button>
@@ -880,7 +881,6 @@ class MapSettings extends Component {
             max="200"
             value={preProcessingValue_contrast}
             onChange={(e) => onOptionChange_PreProcessingContrast(parseInt(parseInt(e.target.value)))}
-            disabled={!optionValue_preprocessingEnabled}
           />
         </td>
         <td>
@@ -891,7 +891,6 @@ class MapSettings extends Component {
             value={preProcessingValue_contrast}
             validators={[(t) => !isNaN(t), (t) => t >= 0, (t) => t <= 200]}
             onValidInput={onOptionChange_PreProcessingContrast}
-            disabled={!optionValue_preprocessingEnabled}
             style={{ width: "3em" }}
           />
         </td>
@@ -900,7 +899,7 @@ class MapSettings extends Component {
             className="resetToDefaultButton"
             title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
             onClick={() => onOptionChange_PreProcessingContrast(SettingDefaults.preProcessingValue_contrast)}
-            disabled={!optionValue_preprocessingEnabled || preProcessingValue_contrast === SettingDefaults.preProcessingValue_contrast}
+            disabled={preProcessingValue_contrast === SettingDefaults.preProcessingValue_contrast}
           >
             {"↺"}
           </button>
@@ -922,7 +921,6 @@ class MapSettings extends Component {
             max="200"
             value={preProcessingValue_saturation}
             onChange={(e) => onOptionChange_PreProcessingSaturation(parseInt(e.target.value))}
-            disabled={!optionValue_preprocessingEnabled}
           />
         </td>
         <td>
@@ -933,7 +931,6 @@ class MapSettings extends Component {
             value={preProcessingValue_saturation}
             validators={[(t) => !isNaN(t), (t) => t >= 0, (t) => t <= 200]}
             onValidInput={onOptionChange_PreProcessingSaturation}
-            disabled={!optionValue_preprocessingEnabled}
             style={{ width: "3em" }}
           />
         </td>
@@ -942,7 +939,7 @@ class MapSettings extends Component {
             className="resetToDefaultButton"
             title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
             onClick={() => onOptionChange_PreProcessingSaturation(SettingDefaults.preProcessingValue_saturation)}
-            disabled={!optionValue_preprocessingEnabled || preProcessingValue_saturation === SettingDefaults.preProcessingValue_saturation}
+            disabled={preProcessingValue_saturation === SettingDefaults.preProcessingValue_saturation}
           >
             {"↺"}
           </button>
@@ -966,7 +963,6 @@ class MapSettings extends Component {
             max="100"
             value={preProcessingValue_blackPoint}
             onChange={(e) => onOptionChange_PreProcessingBlackPoint(parseInt(e.target.value))}
-            disabled={!optionValue_preprocessingEnabled}
           />
         </td>
         <td>
@@ -977,7 +973,6 @@ class MapSettings extends Component {
             value={preProcessingValue_blackPoint}
             validators={[(t) => !isNaN(t), (t) => t >= 0, (t) => t <= 100]}
             onValidInput={onOptionChange_PreProcessingBlackPoint}
-            disabled={!optionValue_preprocessingEnabled}
             style={{ width: "3em" }}
           />
         </td>
@@ -986,7 +981,7 @@ class MapSettings extends Component {
             className="resetToDefaultButton"
             title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
             onClick={() => onOptionChange_PreProcessingBlackPoint(SettingDefaults.preProcessingValue_blackPoint)}
-            disabled={!optionValue_preprocessingEnabled || preProcessingValue_blackPoint === SettingDefaults.preProcessingValue_blackPoint}
+            disabled={preProcessingValue_blackPoint === SettingDefaults.preProcessingValue_blackPoint}
           >
             {"↺"}
           </button>
@@ -1010,7 +1005,6 @@ class MapSettings extends Component {
             max="100"
             value={preProcessingValue_whitePoint}
             onChange={(e) => onOptionChange_PreProcessingWhitePoint(parseInt(e.target.value))}
-            disabled={!optionValue_preprocessingEnabled}
           />
         </td>
         <td>
@@ -1021,7 +1015,6 @@ class MapSettings extends Component {
             value={preProcessingValue_whitePoint}
             validators={[(t) => !isNaN(t), (t) => t >= 0, (t) => t <= 100]}
             onValidInput={onOptionChange_PreProcessingWhitePoint}
-            disabled={!optionValue_preprocessingEnabled}
             style={{ width: "3em" }}
           />
         </td>
@@ -1030,7 +1023,7 @@ class MapSettings extends Component {
             className="resetToDefaultButton"
             title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
             onClick={() => onOptionChange_PreProcessingWhitePoint(SettingDefaults.preProcessingValue_whitePoint)}
-            disabled={!optionValue_preprocessingEnabled || preProcessingValue_whitePoint === SettingDefaults.preProcessingValue_whitePoint}
+            disabled={preProcessingValue_whitePoint === SettingDefaults.preProcessingValue_whitePoint}
           >
             {"↺"}
           </button>
@@ -1054,7 +1047,6 @@ class MapSettings extends Component {
             max="300"
             value={preProcessingValue_gamma}
             onChange={(e) => onOptionChange_PreProcessingGamma(parseInt(e.target.value))}
-            disabled={!optionValue_preprocessingEnabled}
           />
         </td>
         <td>
@@ -1065,7 +1057,6 @@ class MapSettings extends Component {
             value={preProcessingValue_gamma}
             validators={[(t) => !isNaN(t), (t) => t >= 10, (t) => t <= 300]}
             onValidInput={onOptionChange_PreProcessingGamma}
-            disabled={!optionValue_preprocessingEnabled}
             style={{ width: "3em" }}
           />
         </td>
@@ -1074,7 +1065,7 @@ class MapSettings extends Component {
             className="resetToDefaultButton"
             title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
             onClick={() => onOptionChange_PreProcessingGamma(SettingDefaults.preProcessingValue_gamma)}
-            disabled={!optionValue_preprocessingEnabled || preProcessingValue_gamma === SettingDefaults.preProcessingValue_gamma}
+            disabled={preProcessingValue_gamma === SettingDefaults.preProcessingValue_gamma}
           >
             {"↺"}
           </button>
@@ -1098,7 +1089,6 @@ class MapSettings extends Component {
             max="200"
             value={preProcessingValue_sharpness}
             onChange={(e) => onOptionChange_PreProcessingSharpness(parseInt(e.target.value))}
-            disabled={!optionValue_preprocessingEnabled}
           />
         </td>
         <td>
@@ -1109,7 +1099,6 @@ class MapSettings extends Component {
             value={preProcessingValue_sharpness}
             validators={[(t) => !isNaN(t), (t) => t >= 0, (t) => t <= 200]}
             onValidInput={onOptionChange_PreProcessingSharpness}
-            disabled={!optionValue_preprocessingEnabled}
             style={{ width: "3em" }}
           />
         </td>
@@ -1118,7 +1107,7 @@ class MapSettings extends Component {
             className="resetToDefaultButton"
             title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
             onClick={() => onOptionChange_PreProcessingSharpness(SettingDefaults.preProcessingValue_sharpness)}
-            disabled={!optionValue_preprocessingEnabled || preProcessingValue_sharpness === SettingDefaults.preProcessingValue_sharpness}
+            disabled={preProcessingValue_sharpness === SettingDefaults.preProcessingValue_sharpness}
           >
             {"↺"}
           </button>
@@ -1139,7 +1128,6 @@ class MapSettings extends Component {
           <select
             onChange={onOptionChange_PreProcessingBackgroundColourSelect}
             value={preProcessingValue_backgroundColourSelect}
-            disabled={!optionValue_preprocessingEnabled}
           >
             {Object.values(BackgroundColourModes).map((backgroundColourMode) => (
               <option key={backgroundColourMode.uniqueId} value={backgroundColourMode.uniqueId}>
@@ -1163,7 +1151,7 @@ class MapSettings extends Component {
             type="color"
             value={preProcessingValue_backgroundColour}
             onChange={onOptionChange_PreProcessingBackgroundColour}
-            disabled={!optionValue_preprocessingEnabled || preProcessingValue_backgroundColourSelect === BackgroundColourModes.OFF.uniqueId}
+            disabled={preProcessingValue_backgroundColourSelect === BackgroundColourModes.OFF.uniqueId}
           />
         </td>
       </tr>
@@ -1172,7 +1160,7 @@ class MapSettings extends Component {
       <React.Fragment>
         <details>
           <summary>{getLocaleString("MAP-SETTINGS/PREPROCESSING/TITLE")}</summary>
-          <div className={optionValue_preprocessingEnabled ? "settingsGroup" : null}>
+          <div className="settingsDetailsBody">
             <table>
               <tbody>
                 {setting_preprocessing}
@@ -1210,13 +1198,10 @@ class MapSettings extends Component {
       <React.Fragment>
         <details>
           <summary>{getLocaleString("MAP-SETTINGS/EXTRAS/TITLE")}</summary>
-          <table>
+          <div className="settingsDetailsBody">
+            <table>
             <tbody>
               {setting_version}
-              {setting_crop}
-              {setting_crop_zoom}
-              {setting_crop_percent_x}
-              {setting_crop_percent_y}
               {setting_grid}
               {setting_whereSupportBlocks}
               {setting_supportBlock}
@@ -1228,7 +1213,8 @@ class MapSettings extends Component {
               {setting_gammaCorrectAveraging}
               {setting_dithering_boustrophedon}
             </tbody>
-          </table>
+            </table>
+          </div>
         </details>
       </React.Fragment>
     );
@@ -1236,6 +1222,7 @@ class MapSettings extends Component {
       <div className="section boxed settingsDiv">
         <h2>{getLocaleString("MAP-SETTINGS/TITLE")}</h2>
         {setting_mapSize}
+        {settingGroup_cropping}
         {setting_staircasing}
         {settings_mapModeConditional}
         {setting_betterColour}

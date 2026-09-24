@@ -66,7 +66,6 @@ class MapartController extends Component {
     optionValue_dithering_advancedStrength: false, // show red / green / blue propagation separately instead of one strength slider
     optionValue_moreDitheringOptions: false, // every dither method and sharpen variant, instead of the short list
     optionValue_moreColourspaceOptions: false, // every colour distance metric, instead of HCT / CIE76 D65
-    optionValue_preprocessingEnabled: false,
     preProcessingValue_brightness: SettingDefaults.preProcessingValue_brightness,
     preProcessingValue_contrast: SettingDefaults.preProcessingValue_contrast,
     preProcessingValue_saturation: SettingDefaults.preProcessingValue_saturation,
@@ -191,7 +190,7 @@ class MapartController extends Component {
     if (files.length) {
       const file = files[0];
       const imgUrl = URL.createObjectURL(file);
-      this.loadUploadedImageFromURL(imgUrl, "mapart");
+      this.loadUploadedImageFromURL(imgUrl, this.baseFilenameOf(file));
     }
   }.bind(this);
 
@@ -202,9 +201,16 @@ class MapartController extends Component {
     if (files.length) {
       const file = files[0];
       const imgUrl = URL.createObjectURL(file);
-      this.loadUploadedImageFromURL(imgUrl, "mapart");
+      this.loadUploadedImageFromURL(imgUrl, this.baseFilenameOf(file));
     }
   }.bind(this);
+
+  // The file's name without its extension, or "mapart" when there is no usable name (clipboard pastes
+  // often arrive as a bare "image.png", which is no more informative than the fallback).
+  baseFilenameOf(file) {
+    const base = (file.name || "").replace(/\.[^/.]+$/, "").trim();
+    return base === "" || base === "image" ? "mapart" : base;
+  }
 
   componentDidMount() {
     this.loadUploadedImageFromURL(IMG_Upload, "mapart");
@@ -272,7 +278,7 @@ class MapartController extends Component {
     } else {
       const file = files[0];
       const imgUrl = URL.createObjectURL(file);
-      this.loadUploadedImageFromURL(imgUrl, file.name.replace(/\.[^/.]+$/, ""));
+      this.loadUploadedImageFromURL(imgUrl, this.baseFilenameOf(file));
     }
   };
 
@@ -495,12 +501,6 @@ class MapartController extends Component {
     this.setState({ optionValue_supportBlock: text });
   };
 
-  onOptionChange_PreProcessingEnabled = () => {
-    this.setState({
-      optionValue_preprocessingEnabled: !this.state.optionValue_preprocessingEnabled,
-    });
-  };
-
   onOptionChange_PreProcessingBrightness = (value) => {
     this.setState({
       preProcessingValue_brightness: value,
@@ -544,8 +544,6 @@ class MapartController extends Component {
   };
 
   onOptionChange_PreProcessingResetAll = () => {
-    // Deliberately leaves optionValue_preprocessingEnabled alone: this resets the values,
-    // it does not switch preprocessing off.
     this.setState({
       preProcessingValue_brightness: SettingDefaults.preProcessingValue_brightness,
       preProcessingValue_contrast: SettingDefaults.preProcessingValue_contrast,
@@ -1020,7 +1018,6 @@ class MapartController extends Component {
       optionValue_dithering_advancedStrength,
       optionValue_moreDitheringOptions,
       optionValue_moreColourspaceOptions,
-      optionValue_preprocessingEnabled,
       preProcessingValue_brightness,
       preProcessingValue_contrast,
       preProcessingValue_saturation,
@@ -1101,8 +1098,6 @@ class MapartController extends Component {
             onOptionChange_moreDitheringOptions={this.onOptionChange_moreDitheringOptions}
             optionValue_moreColourspaceOptions={optionValue_moreColourspaceOptions}
             onOptionChange_moreColourspaceOptions={this.onOptionChange_moreColourspaceOptions}
-            optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
-            onOptionChange_PreProcessingEnabled={this.onOptionChange_PreProcessingEnabled}
             preProcessingValue_brightness={preProcessingValue_brightness}
             onOptionChange_PreProcessingBrightness={this.onOptionChange_PreProcessingBrightness}
             preProcessingValue_contrast={preProcessingValue_contrast}
@@ -1152,7 +1147,6 @@ class MapartController extends Component {
             optionValue_dithering_propagation_green={optionValue_dithering_propagation_green}
             optionValue_dithering_propagation_blue={optionValue_dithering_propagation_blue}
             optionValue_dithering_boustrophedon={optionValue_dithering_boustrophedon}
-            optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
             preProcessingValue_brightness={preProcessingValue_brightness}
             preProcessingValue_contrast={preProcessingValue_contrast}
             preProcessingValue_saturation={preProcessingValue_saturation}
@@ -1197,7 +1191,6 @@ class MapartController extends Component {
               optionValue_dithering_propagation_green={optionValue_dithering_propagation_green}
               optionValue_dithering_propagation_blue={optionValue_dithering_propagation_blue}
               optionValue_dithering_boustrophedon={optionValue_dithering_boustrophedon}
-              optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
               preProcessingValue_brightness={preProcessingValue_brightness}
               preProcessingValue_contrast={preProcessingValue_contrast}
               preProcessingValue_saturation={preProcessingValue_saturation}
@@ -1238,7 +1231,6 @@ class MapartController extends Component {
               optionValue_dithering_propagation_green={optionValue_dithering_propagation_green}
               optionValue_dithering_propagation_blue={optionValue_dithering_propagation_blue}
               optionValue_dithering_boustrophedon={optionValue_dithering_boustrophedon}
-              optionValue_preprocessingEnabled={optionValue_preprocessingEnabled}
               preProcessingValue_brightness={preProcessingValue_brightness}
               preProcessingValue_contrast={preProcessingValue_contrast}
               preProcessingValue_saturation={preProcessingValue_saturation}

@@ -17,3 +17,11 @@
   opacity: 0.35;
   cursor: default;
 }
+
+/* Contents of the Image preprocessing and Advanced options dropdowns: a shade lighter than the panel and
+   nudged in, so what belongs to the dropdown reads as a group without any extra chrome. */
+.settingsDetailsBody {
+  margin: 0.2em 0 0.3em 0.8em;
+  padding: 0.3em 0.4em;
+  background-color: var(--detailsBackground);
+}

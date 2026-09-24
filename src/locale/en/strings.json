@@ -190,7 +190,6 @@
     },
     "PREPROCESSING": {
       "TITLE": "Image preprocessing",
-      "ENABLE": "Enable",
       "RESET-ALL": "Reset all",
       "BRIGHTNESS": "Brightness",
       "CONTRAST": "Contrast",
