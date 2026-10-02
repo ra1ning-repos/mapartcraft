@@ -93,6 +93,12 @@ class MapSettings extends Component {
       onOptionChange_PreProcessingGamma,
       preProcessingValue_sharpness,
       onOptionChange_PreProcessingSharpness,
+      preProcessingValue_noiseReduction,
+      onOptionChange_PreProcessingNoiseReduction,
+      preProcessingValue_vibrance,
+      onOptionChange_PreProcessingVibrance,
+      preProcessingValue_warmth,
+      onOptionChange_PreProcessingWarmth,
       preProcessingValue_backgroundColourSelect,
       onOptionChange_PreProcessingBackgroundColourSelect,
       preProcessingValue_backgroundColour,
@@ -156,7 +162,7 @@ class MapSettings extends Component {
           value={optionValue_mapSize_x}
           validators={[(t) => !isNaN(t), (t) => t > 0]}
           onValidInput={onOptionChange_mapSize_x}
-          style={{ width: "2em" }}
+          style={{ width: "3em" }}
         />
         x
         <BufferedNumberInput
@@ -166,7 +172,7 @@ class MapSettings extends Component {
           value={optionValue_mapSize_y}
           validators={[(t) => !isNaN(t), (t) => t > 0]}
           onValidInput={onOptionChange_mapSize_y}
-          style={{ width: "2em" }}
+          style={{ width: "3em" }}
         />
         <br />
       </React.Fragment>
@@ -1114,6 +1120,132 @@ class MapSettings extends Component {
         </td>
       </tr>
     );
+    const setting_preprocessing_vibrance = (
+      <tr>
+        <th>
+          <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/PREPROCESSING/VIBRANCE-TT")}>
+            <b>
+              {getLocaleString("MAP-SETTINGS/PREPROCESSING/VIBRANCE")}
+              {":"}
+            </b>
+          </Tooltip>{" "}
+        </th>
+        <td>
+          <input
+            type="range"
+            min="-100"
+            max="100"
+            value={preProcessingValue_vibrance}
+            onChange={(e) => onOptionChange_PreProcessingVibrance(parseInt(e.target.value))}
+          />
+        </td>
+        <td>
+          <BufferedNumberInput
+            min="-100"
+            max="100"
+            step="1"
+            value={preProcessingValue_vibrance}
+            validators={[(t) => !isNaN(t), (t) => t >= -100, (t) => t <= 100]}
+            onValidInput={onOptionChange_PreProcessingVibrance}
+            style={{ width: "3em" }}
+          />
+        </td>
+        <td>
+          <button
+            className="resetToDefaultButton"
+            title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
+            onClick={() => onOptionChange_PreProcessingVibrance(SettingDefaults.preProcessingValue_vibrance)}
+            disabled={preProcessingValue_vibrance === SettingDefaults.preProcessingValue_vibrance}
+          >
+            {"↺"}
+          </button>
+        </td>
+      </tr>
+    );
+    const setting_preprocessing_warmth = (
+      <tr>
+        <th>
+          <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/PREPROCESSING/WARMTH-TT")}>
+            <b>
+              {getLocaleString("MAP-SETTINGS/PREPROCESSING/WARMTH")}
+              {":"}
+            </b>
+          </Tooltip>{" "}
+        </th>
+        <td>
+          <input
+            type="range"
+            min="-100"
+            max="100"
+            value={preProcessingValue_warmth}
+            onChange={(e) => onOptionChange_PreProcessingWarmth(parseInt(e.target.value))}
+          />
+        </td>
+        <td>
+          <BufferedNumberInput
+            min="-100"
+            max="100"
+            step="1"
+            value={preProcessingValue_warmth}
+            validators={[(t) => !isNaN(t), (t) => t >= -100, (t) => t <= 100]}
+            onValidInput={onOptionChange_PreProcessingWarmth}
+            style={{ width: "3em" }}
+          />
+        </td>
+        <td>
+          <button
+            className="resetToDefaultButton"
+            title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
+            onClick={() => onOptionChange_PreProcessingWarmth(SettingDefaults.preProcessingValue_warmth)}
+            disabled={preProcessingValue_warmth === SettingDefaults.preProcessingValue_warmth}
+          >
+            {"↺"}
+          </button>
+        </td>
+      </tr>
+    );
+    const setting_preprocessing_noiseReduction = (
+      <tr>
+        <th>
+          <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/PREPROCESSING/NOISE-REDUCTION-TT")}>
+            <b>
+              {getLocaleString("MAP-SETTINGS/PREPROCESSING/NOISE-REDUCTION")}
+              {":"}
+            </b>
+          </Tooltip>{" "}
+        </th>
+        <td>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={preProcessingValue_noiseReduction}
+            onChange={(e) => onOptionChange_PreProcessingNoiseReduction(parseInt(e.target.value))}
+          />
+        </td>
+        <td>
+          <BufferedNumberInput
+            min="0"
+            max="100"
+            step="1"
+            value={preProcessingValue_noiseReduction}
+            validators={[(t) => !isNaN(t), (t) => t >= 0, (t) => t <= 100]}
+            onValidInput={onOptionChange_PreProcessingNoiseReduction}
+            style={{ width: "3em" }}
+          />
+        </td>
+        <td>
+          <button
+            className="resetToDefaultButton"
+            title={getLocaleString("MAP-SETTINGS/RESET-TO-DEFAULT")}
+            onClick={() => onOptionChange_PreProcessingNoiseReduction(SettingDefaults.preProcessingValue_noiseReduction)}
+            disabled={preProcessingValue_noiseReduction === SettingDefaults.preProcessingValue_noiseReduction}
+          >
+            {"↺"}
+          </button>
+        </td>
+      </tr>
+    );
     const setting_preprocessing_background = (
       <tr>
         <th>
@@ -1167,10 +1299,13 @@ class MapSettings extends Component {
                 {setting_preprocessing_brightness}
                 {setting_preprocessing_contrast}
                 {setting_preprocessing_saturation}
+                {setting_preprocessing_vibrance}
+                {setting_preprocessing_warmth}
                 {setting_preprocessing_blackPoint}
                 {setting_preprocessing_whitePoint}
                 {setting_preprocessing_gamma}
                 {setting_preprocessing_sharpness}
+                {setting_preprocessing_noiseReduction}
                 {setting_preprocessing_background}
                 {setting_preprocessing_backgroundColour}
               </tbody>

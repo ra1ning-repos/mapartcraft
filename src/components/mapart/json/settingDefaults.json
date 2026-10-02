@@ -9,5 +9,8 @@
   "preProcessingValue_whitePoint": 100,
   "preProcessingValue_gamma": 100,
   "preProcessingValue_sharpness": 0,
+  "preProcessingValue_noiseReduction": 0,
+  "preProcessingValue_vibrance": 0,
+  "preProcessingValue_warmth": 0,
   "preProcessingValue_backgroundColour": "#151515"
 }

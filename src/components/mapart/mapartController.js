@@ -73,6 +73,9 @@ class MapartController extends Component {
     preProcessingValue_whitePoint: SettingDefaults.preProcessingValue_whitePoint,
     preProcessingValue_gamma: SettingDefaults.preProcessingValue_gamma,
     preProcessingValue_sharpness: SettingDefaults.preProcessingValue_sharpness,
+    preProcessingValue_noiseReduction: SettingDefaults.preProcessingValue_noiseReduction,
+    preProcessingValue_vibrance: SettingDefaults.preProcessingValue_vibrance,
+    preProcessingValue_warmth: SettingDefaults.preProcessingValue_warmth,
     preProcessingValue_backgroundColourSelect: BackgroundColourModes.OFF.uniqueId,
     preProcessingValue_backgroundColour: SettingDefaults.preProcessingValue_backgroundColour,
     optionValue_extras_moreStaircasingOptions: false,
@@ -543,6 +546,24 @@ class MapartController extends Component {
     });
   };
 
+  onOptionChange_PreProcessingNoiseReduction = (value) => {
+    this.setState({
+      preProcessingValue_noiseReduction: value,
+    });
+  };
+
+  onOptionChange_PreProcessingVibrance = (value) => {
+    this.setState({
+      preProcessingValue_vibrance: value,
+    });
+  };
+
+  onOptionChange_PreProcessingWarmth = (value) => {
+    this.setState({
+      preProcessingValue_warmth: value,
+    });
+  };
+
   onOptionChange_PreProcessingResetAll = () => {
     this.setState({
       preProcessingValue_brightness: SettingDefaults.preProcessingValue_brightness,
@@ -552,6 +573,9 @@ class MapartController extends Component {
       preProcessingValue_whitePoint: SettingDefaults.preProcessingValue_whitePoint,
       preProcessingValue_gamma: SettingDefaults.preProcessingValue_gamma,
       preProcessingValue_sharpness: SettingDefaults.preProcessingValue_sharpness,
+      preProcessingValue_noiseReduction: SettingDefaults.preProcessingValue_noiseReduction,
+      preProcessingValue_vibrance: SettingDefaults.preProcessingValue_vibrance,
+      preProcessingValue_warmth: SettingDefaults.preProcessingValue_warmth,
       preProcessingValue_backgroundColourSelect: BackgroundColourModes.OFF.uniqueId,
       preProcessingValue_backgroundColour: SettingDefaults.preProcessingValue_backgroundColour,
     });
@@ -1025,6 +1049,9 @@ class MapartController extends Component {
       preProcessingValue_whitePoint,
       preProcessingValue_gamma,
       preProcessingValue_sharpness,
+      preProcessingValue_noiseReduction,
+      preProcessingValue_vibrance,
+      preProcessingValue_warmth,
       preProcessingValue_backgroundColourSelect,
       preProcessingValue_backgroundColour,
       optionValue_extras_moreStaircasingOptions,
@@ -1112,6 +1139,12 @@ class MapartController extends Component {
             onOptionChange_PreProcessingGamma={this.onOptionChange_PreProcessingGamma}
             preProcessingValue_sharpness={preProcessingValue_sharpness}
             onOptionChange_PreProcessingSharpness={this.onOptionChange_PreProcessingSharpness}
+            preProcessingValue_noiseReduction={preProcessingValue_noiseReduction}
+            onOptionChange_PreProcessingNoiseReduction={this.onOptionChange_PreProcessingNoiseReduction}
+            preProcessingValue_vibrance={preProcessingValue_vibrance}
+            onOptionChange_PreProcessingVibrance={this.onOptionChange_PreProcessingVibrance}
+            preProcessingValue_warmth={preProcessingValue_warmth}
+            onOptionChange_PreProcessingWarmth={this.onOptionChange_PreProcessingWarmth}
             preProcessingValue_backgroundColourSelect={preProcessingValue_backgroundColourSelect}
             onOptionChange_PreProcessingBackgroundColourSelect={this.onOptionChange_PreProcessingBackgroundColourSelect}
             preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
@@ -1154,6 +1187,9 @@ class MapartController extends Component {
             preProcessingValue_whitePoint={preProcessingValue_whitePoint}
             preProcessingValue_gamma={preProcessingValue_gamma}
             preProcessingValue_sharpness={preProcessingValue_sharpness}
+            preProcessingValue_noiseReduction={preProcessingValue_noiseReduction}
+            preProcessingValue_vibrance={preProcessingValue_vibrance}
+            preProcessingValue_warmth={preProcessingValue_warmth}
             preProcessingValue_backgroundColourSelect={preProcessingValue_backgroundColourSelect}
             preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
             uploadedImage={uploadedImage}
@@ -1198,6 +1234,9 @@ class MapartController extends Component {
               preProcessingValue_whitePoint={preProcessingValue_whitePoint}
               preProcessingValue_gamma={preProcessingValue_gamma}
               preProcessingValue_sharpness={preProcessingValue_sharpness}
+              preProcessingValue_noiseReduction={preProcessingValue_noiseReduction}
+              preProcessingValue_vibrance={preProcessingValue_vibrance}
+              preProcessingValue_warmth={preProcessingValue_warmth}
               preProcessingValue_backgroundColourSelect={preProcessingValue_backgroundColourSelect}
               preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
               uploadedImage={uploadedImage}
@@ -1238,6 +1277,9 @@ class MapartController extends Component {
               preProcessingValue_whitePoint={preProcessingValue_whitePoint}
               preProcessingValue_gamma={preProcessingValue_gamma}
               preProcessingValue_sharpness={preProcessingValue_sharpness}
+              preProcessingValue_noiseReduction={preProcessingValue_noiseReduction}
+              preProcessingValue_vibrance={preProcessingValue_vibrance}
+              preProcessingValue_warmth={preProcessingValue_warmth}
               preProcessingValue_backgroundColourSelect={preProcessingValue_backgroundColourSelect}
               preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
               uploadedImage={uploadedImage}

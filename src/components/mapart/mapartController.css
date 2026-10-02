@@ -67,19 +67,30 @@
 /* Centres the preview / editor column in whatever width it is given */
 .sectionPreviewArea {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: flex-start;
   min-width: 0;
 }
 
 /* The preview with the image editor stacked beneath it. flex-shrink: 0 keeps its measured width honest
    even while it is (briefly) too wide for its column, which is exactly when chooseLayout needs to know. */
+/* Centred while it fits, left-aligned once it is wider than the space: auto margins on a flex item soak
+   up free space evenly, but collapse to zero when there is none, so a preview wider than the page starts
+   at the left edge and can be scrolled to fully. justify-content: center would push the overflow to both
+   sides and leave the left cutoff unreachable. Same trick again inside the column, for each child. */
 .previewAndEditor {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   row-gap: 0.6em;
   flex-shrink: 0;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.previewAndEditor > * {
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .section {

@@ -77,6 +77,9 @@ class MapPreview extends Component {
       prevProps.preProcessingValue_whitePoint === newProps.preProcessingValue_whitePoint,
       prevProps.preProcessingValue_gamma === newProps.preProcessingValue_gamma,
       prevProps.preProcessingValue_sharpness === newProps.preProcessingValue_sharpness,
+      prevProps.preProcessingValue_noiseReduction === newProps.preProcessingValue_noiseReduction,
+      prevProps.preProcessingValue_vibrance === newProps.preProcessingValue_vibrance,
+      prevProps.preProcessingValue_warmth === newProps.preProcessingValue_warmth,
       prevProps.preProcessingValue_backgroundColourSelect === newProps.preProcessingValue_backgroundColourSelect,
       prevProps.preProcessingValue_backgroundColour === newProps.preProcessingValue_backgroundColour,
       prevProps.uploadedImage === newProps.uploadedImage,
@@ -124,6 +127,9 @@ class MapPreview extends Component {
       prevProps.preProcessingValue_whitePoint === newProps.preProcessingValue_whitePoint,
       prevProps.preProcessingValue_gamma === newProps.preProcessingValue_gamma,
       prevProps.preProcessingValue_sharpness === newProps.preProcessingValue_sharpness,
+      prevProps.preProcessingValue_noiseReduction === newProps.preProcessingValue_noiseReduction,
+      prevProps.preProcessingValue_vibrance === newProps.preProcessingValue_vibrance,
+      prevProps.preProcessingValue_warmth === newProps.preProcessingValue_warmth,
       prevProps.preProcessingValue_backgroundColourSelect === newProps.preProcessingValue_backgroundColourSelect,
       prevProps.preProcessingValue_backgroundColour === newProps.preProcessingValue_backgroundColour,
       prevProps.uploadedImage === newProps.uploadedImage,
@@ -438,16 +444,30 @@ class MapPreview extends Component {
   // pixel pass over the source canvas once the image has been drawn (and after the brightness /
   // contrast / saturate filter has already been baked in by drawImage).
   applyPreProcessingPixelPass(ctx_source) {
-    const { preProcessingValue_blackPoint, preProcessingValue_whitePoint, preProcessingValue_gamma, preProcessingValue_sharpness } = this.props;
+    const {
+      preProcessingValue_blackPoint,
+      preProcessingValue_whitePoint,
+      preProcessingValue_gamma,
+      preProcessingValue_sharpness,
+      preProcessingValue_noiseReduction,
+      preProcessingValue_vibrance,
+      preProcessingValue_warmth,
+    } = this.props;
     const levelsAreDefault =
       preProcessingValue_blackPoint === 0 && preProcessingValue_whitePoint === 100 && preProcessingValue_gamma === 100;
-    if (levelsAreDefault && preProcessingValue_sharpness === 0) {
+    if (levelsAreDefault && preProcessingValue_sharpness === 0 && preProcessingValue_noiseReduction === 0 && preProcessingValue_vibrance === 0 && preProcessingValue_warmth === 0) {
       return; // nothing to do, so skip the getImageData / putImageData round trip entirely
     }
     const width = ctx_source.canvas.width;
     const height = ctx_source.canvas.height;
     const imageData = ctx_source.getImageData(0, 0, width, height);
     const data = imageData.data;
+
+    // Order: denoise the raw pixels first (so later steps do not amplify grain), then tone, then colour,
+    // then sharpen last (so it acts on the final image rather than being smoothed away).
+    if (preProcessingValue_noiseReduction !== 0) {
+      this.applyNoiseReduction(data, width, height, preProcessingValue_noiseReduction);
+    }
 
     if (!levelsAreDefault) {
       // Black / white point and gamma collapse into a single 256-entry lookup table.
@@ -466,6 +486,14 @@ class MapPreview extends Component {
         data[i + 1] = lookupTable[data[i + 1]];
         data[i + 2] = lookupTable[data[i + 2]];
       }
+    }
+
+    if (preProcessingValue_warmth !== 0) {
+      this.applyWarmth(data, preProcessingValue_warmth);
+    }
+
+    if (preProcessingValue_vibrance !== 0) {
+      this.applyVibrance(data, preProcessingValue_vibrance);
     }
 
     if (preProcessingValue_sharpness !== 0) {
@@ -507,6 +535,137 @@ class MapPreview extends Component {
     }
 
     ctx_source.putImageData(imageData, 0, 0);
+  }
+
+  // Edge-preserving smoothing (a bilateral filter): each pixel becomes a weighted mean of its 5x5
+  // neighbourhood, where a neighbour's weight falls off with both its distance and how different its
+  // colour is. Similar pixels average together (grain disappears); across an edge the colour difference
+  // is large, the weight is ~0, and the edge stays put. The slider sets how different a neighbour may be
+  // and still count. Reads from a snapshot so smoothed pixels do not feed back into their neighbours.
+  applyNoiseReduction(data, width, height, amount) {
+    const source = new Uint8ClampedArray(data);
+    const radius = 2;
+    const colourSigma = 4 + (amount / 100) * 44; // levels of RGB difference at which weight has fallen to ~60%
+    const twoSigmaSquared = 2 * colourSigma * colourSigma;
+    // spatial weights for the 5x5 window (gaussian, sigma 1.4 px)
+    const spatial = [];
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        spatial.push(Math.exp(-(dx * dx + dy * dy) / (2 * 1.4 * 1.4)));
+      }
+    }
+    // colour weight lookup by squared RGB distance (max 3 * 255^2), so the inner loop has no exp() in it
+    const maxDistance = 3 * 255 * 255;
+    const colourWeight = new Float32Array(maxDistance + 1);
+    for (let d = 0; d <= maxDistance; d++) {
+      colourWeight[d] = Math.exp(-d / twoSigmaSquared);
+    }
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const centreIndex = (y * width + x) * 4;
+        if (source[centreIndex + 3] === 0) {
+          continue;
+        }
+        const cr = source[centreIndex];
+        const cg = source[centreIndex + 1];
+        const cb = source[centreIndex + 2];
+        let sumR = 0;
+        let sumG = 0;
+        let sumB = 0;
+        let sumW = 0;
+        let k = 0;
+        for (let dy = -radius; dy <= radius; dy++) {
+          const ny = y + dy;
+          for (let dx = -radius; dx <= radius; dx++, k++) {
+            const nx = x + dx;
+            if (nx < 0 || ny < 0 || nx >= width || ny >= height) {
+              continue;
+            }
+            const n = (ny * width + nx) * 4;
+            if (source[n + 3] === 0) {
+              continue;
+            }
+            const dr = source[n] - cr;
+            const dg = source[n + 1] - cg;
+            const db = source[n + 2] - cb;
+            const w = spatial[k] * colourWeight[dr * dr + dg * dg + db * db];
+            sumR += source[n] * w;
+            sumG += source[n + 1] * w;
+            sumB += source[n + 2] * w;
+            sumW += w;
+          }
+        }
+        data[centreIndex] = sumR / sumW;
+        data[centreIndex + 1] = sumG / sumW;
+        data[centreIndex + 2] = sumB / sumW;
+      }
+    }
+  }
+
+  // White balance shift. Positive warmth lifts red and drops blue (towards amber), negative does the
+  // opposite (towards blue); green is nudged slightly so the shift runs along the daylight locus rather
+  // than towards magenta. Each pixel is then rescaled so its luma is unchanged, so warmth never brightens
+  // or darkens the picture, it only recolours it.
+  applyWarmth(data, warmth) {
+    const shift = warmth / 100;
+    const gainR = 1 + 0.25 * shift;
+    const gainG = 1 + 0.06 * shift;
+    const gainB = 1 - 0.25 * shift;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] === 0) {
+        continue;
+      }
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const lumaBefore = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      let r2 = r * gainR;
+      let g2 = g * gainG;
+      let b2 = b * gainB;
+      const lumaAfter = 0.2126 * r2 + 0.7152 * g2 + 0.0722 * b2;
+      if (lumaAfter > 0) {
+        const correction = lumaBefore / lumaAfter;
+        r2 *= correction;
+        g2 *= correction;
+        b2 *= correction;
+      }
+      data[i] = r2;
+      data[i + 1] = g2;
+      data[i + 2] = b2;
+    }
+  }
+
+  // Saturation that favours what needs it: muted colours are boosted most, colours that are already
+  // vivid barely move, and pure greys cannot gain colour they never had. Skin-ish hues (the orange band)
+  // get half the boost, which is the usual reason to reach for vibrance instead of saturation. Negative
+  // values reverse the weighting so the most saturated colours are calmed first. Chroma is scaled about
+  // the pixel's luma, so brightness is preserved.
+  applyVibrance(data, vibrance) {
+    const strength = vibrance / 100; // -1 .. 1
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] === 0) {
+        continue;
+      }
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      if (max === min) {
+        continue; // grey: no chroma to scale
+      }
+      const saturation = (max - min) / max; // HSV saturation, 0..1
+      let boost = strength > 0 ? 1.5 * strength * (1 - saturation) : strength * saturation; // 1.5: +100 should be a clearly visible lift
+      if (strength > 0 && max === r && g > b) {
+        // hue is in the red-to-yellow band where skin tones live: temper the boost
+        boost *= 0.5;
+      }
+      const scale = Math.max(0, 1 + boost);
+      const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      data[i] = luma + (r - luma) * scale;
+      data[i + 1] = luma + (g - luma) * scale;
+      data[i + 2] = luma + (b - luma) * scale;
+    }
   }
 
   isCurveDither(ditherUniqueId) {
