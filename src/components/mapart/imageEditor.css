@@ -6,6 +6,12 @@
   display: inline;
 }
 
+/* Open current map sits on the title line, right of the heading */
+.imageEditorHeaderButton {
+  margin-left: 1.2em;
+  vertical-align: middle;
+}
+
 .imageEditorSubtitle {
   font-size: 0.85em;
   opacity: 0.8;
@@ -134,33 +140,59 @@
   margin-top: 0.6em;
 }
 
-/* Copied selections: thumbnail — paste button — delete, one per row */
-.editorClipboard {
-  margin-top: 0.6em;
+/* Layer panel: one row per layer, top of the stack first. The row itself is the "make active" target;
+   the active row is a shade lighter. Thumbnail — spacer — delete — up / down. */
+.editorLayers {
   display: flex;
   flex-direction: column;
-  row-gap: 0.4em;
+  row-gap: 0.25em;
+  margin-top: 0.4em;
 }
 
-.editorClipboardEntry {
+.editorLayerRow {
   display: flex;
   flex-direction: row;
   align-items: center;
-  column-gap: 0.5em;
+  column-gap: 0.4em;
+  padding: 0.25em 0.4em;
+  background-color: var(--headerBackground);
+  outline: 0.1em solid #777;
+  cursor: pointer;
 }
 
-.editorClipboardThumb {
+.editorLayerRow_active {
+  background-color: var(--detailsBackground);
+  outline: 0.15em solid var(--rebaneGreen);
+  cursor: default;
+}
+
+.editorLayerThumb {
   image-rendering: pixelated;
   background: repeating-conic-gradient(#3a3a3a 0 25%, #2a2a2a 0 50%) 0 0 / 8px 8px;
   outline: 0.1em solid #777;
 }
 
-.editorClipboardDash {
-  opacity: 0.6;
+.editorLayerThumb_hidden {
+  opacity: 0.35;
 }
 
-.editorClipboardDelete {
-  padding: 0.15em 0.5em;
+.editorLayerSpacer {
+  flex: 1 1 auto;
+}
+
+.editorLayerArrows {
+  display: flex;
+  flex-direction: column;
+  row-gap: 0.1em;
+}
+
+.editorLayerArrow {
+  width: 1.8em;
+  height: 1.2em;
+}
+
+.editorLayerAdd {
+  align-self: flex-start;
 }
 
 .editorActiveSwatch_empty {
@@ -172,8 +204,16 @@
   background: repeating-conic-gradient(#3a3a3a 0 25%, #2a2a2a 0 50%) 0 0 / 10px 10px;
 }
 
+.editorPaletteHeading {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Wrapped to the palette's own width so the note never widens the panel */
 .editorPaletteNote {
   opacity: 0.8;
+  max-width: 222px; /* 9 swatches at 22px + 8 gaps at 3px */
+  line-height: 1.2;
 }
 
 .editorHistoryButtons {

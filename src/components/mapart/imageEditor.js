@@ -17,9 +17,12 @@ import IMG_Textures from "../../images/textures.png";
 import "./imageEditor.css";
 
 /*
-  Pixel editor for the dithered map. Holds its own copy of the image (this.imageData) which is only
-  ever changed by the user: painting, filling, undo/redo, or explicitly copying the current map
-  preview in. Settings changes upstream never touch it. Every committed edit is followed by a run of
+  Pixel editor for the dithered map. The picture is a stack of layers (this.layers, bottom first),
+  each a full-canvas ImageData of opaque or fully transparent pixels; this.imageData is their composite
+  (the top-most opaque pixel wins), which is what the viewport shows, what the eyedropper and copy tools
+  read, and what the download buttons export. Edits go to the one active layer. Nothing here is changed
+  by settings upstream: layers only change by painting, filling, erasing, undo/redo, layer management, or
+  explicitly opening the current map preview as a new layer. Every committed edit is followed by a run of
   the map worker with dithering off, purely to recompute the per-map materials and support-block
   tallies that the download buttons need - every pixel is already a palette colour so that pass
   changes nothing visible, it just does the accounting.
@@ -35,7 +38,7 @@ const TOOL_ZOOM = "zoom";
 const TRANSPARENT = [0, 0, 0, 0]; // the Air "colour": no block at all in the NBT, as elsewhere in the app
 const AIR_COLOUR_SET_ID = "61";
 const isAir = (rgba) => rgba !== null && rgba.length > 3 && rgba[3] === 0;
-const THUMBNAIL_MAX = 72; // longest side of a copied-selection thumbnail, in screen pixels
+const LAYER_THUMB = 56; // longest side of a layer thumbnail, in screen pixels
 
 // Tool icons: simple 16x16 line drawings in currentColor, so they follow the button's text colour.
 const svgIcon = (children) => (
@@ -86,6 +89,29 @@ const ICONS = {
       <path d="M5 7h4M7 5v4" />
     </React.Fragment>
   ),
+  eyeOpen: svgIcon(
+    <React.Fragment>
+      <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z" />
+      <circle cx="8" cy="8" r="2" />
+    </React.Fragment>
+  ),
+  eyeClosed: svgIcon(
+    <React.Fragment>
+      <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z" />
+      <path d="M2.5 13.5l11-11" />
+    </React.Fragment>
+  ),
+  trash: svgIcon(
+    <React.Fragment>
+      <path d="M3 4.5h10" />
+      <path d="M6 4.5V3h4v1.5" />
+      <path d="M4.5 4.5l.7 8.5h5.6l.7-8.5" />
+      <path d="M6.8 7v4M9.2 7v4" />
+    </React.Fragment>
+  ),
+  chevronUp: svgIcon(<path d="M4 10l4-4 4 4" />),
+  chevronDown: svgIcon(<path d="M4 6l4 4 4-4" />),
+  plus: svgIcon(<path d="M8 3.5v9M3.5 8h9" />),
 };
 
 // The viewport is a square of VIEW_STEP multiples; the map (document) is drawn inside it at `zoom`
@@ -114,22 +140,26 @@ class ImageEditor extends Component {
     panning: false,
     selectionMode: false, // brush / fill / eraser act on the selection mask instead of the picture
     selectedCount: 0, // number of pixels currently in the selection mask
-    clipboard: [], // copied selections: { id, x, y, width, height, pixels, mask, count, thumbnail }
+    layerList: [], // [{ id, visible, thumbnail }] bottom first, mirrored from this.layers for rendering
+    activeLayerId: null,
     copyStatus: null, // "copied" | "downloaded" briefly after the Copy image button, else null
     openedBaseFilename: null, // base filename of the image that was last opened into the editor
     revision: 0, // bumped on every change so the palette/warnings re-render
   };
 
   canvasRef = React.createRef();
-  imageData = null; // ImageData; the single source of truth for the picture
-  documentCanvas = null; // offscreen canvas mirroring imageData, drawn into the viewport scaled and offset
+  detailsRef = React.createRef();
+  layers = []; // [{ id, visible, imageData, canvas }] bottom first; the source of truth for the picture
+  activeLayerId = null;
+  nextLayerId = 1;
+  imageData = null; // ImageData: the composite of the visible layers, rebuilt by recomposite()
+  documentCanvas = null; // offscreen canvas holding the composite, drawn into the viewport scaled and offset
   selectionMask = null; // Uint8Array, one entry per pixel, 1 = selected
   maskCanvas = null; // offscreen canvas, opaque where selected, drawn hatched over the viewport
   overlayCanvas = null; // viewport-sized scratch used to clip the hatch pattern to the selection
   hatchPattern = null;
   checkerPattern = null;
   airAvailable = false; // whether the Air colour set is in the block selection (set by getPalette)
-  nextClipboardId = 1;
   view = { zoom: 3, panX: 0, panY: 0 }; // kept off React state: it changes on every drag / wheel event
   drag = null; // { mode: "pan", lastX, lastY } or { mode: "paint", target: "image" | "mask", value } while a button is held
   undoStack = [];
@@ -142,12 +172,16 @@ class ImageEditor extends Component {
   unmounted = false;
 
   componentDidMount() {
-    this.imageData = new ImageData(this.state.canvasWidth, this.state.canvasHeight);
     this.documentCanvas = document.createElement("canvas");
     this.maskCanvas = document.createElement("canvas");
     this.overlayCanvas = document.createElement("canvas");
     this.selectionMask = new Uint8Array(this.state.canvasWidth * this.state.canvasHeight);
-    this.syncDocumentCanvas();
+    // there is always at least one layer; start with an empty one at the default size
+    const first = this.makeLayer(new ImageData(this.state.canvasWidth, this.state.canvasHeight));
+    this.layers = [first];
+    this.activeLayerId = first.id;
+    this.recomposite();
+    this.publishLayers();
     this.syncMaskCanvas();
     this.zoomToFit();
     window.addEventListener("mouseup", this.onWindowMouseUp);
@@ -298,17 +332,158 @@ class ImageEditor extends Component {
 
   // ---------------------------------------------------------------- drawing
 
-  // Copies imageData into the offscreen document canvas. Called after every pixel change.
-  syncDocumentCanvas() {
-    if (this.documentCanvas === null || this.imageData === null) {
+  // ---------------------------------------------------------------- layers
+
+  makeLayer(imageData, visible = true) {
+    const canvas = document.createElement("canvas");
+    canvas.width = imageData.width;
+    canvas.height = imageData.height;
+    const layer = { id: this.nextLayerId++, visible, imageData, canvas, thumbnail: null };
+    this.syncLayerCanvas(layer);
+    return layer;
+  }
+
+  activeLayer() {
+    return this.layers.find((layer) => layer.id === this.activeLayerId) || this.layers[this.layers.length - 1];
+  }
+
+  // Copies a layer's pixels into its own canvas (so compositing is one drawImage per layer) and refreshes
+  // its thumbnail.
+  syncLayerCanvas(layer) {
+    layer.canvas.getContext("2d").putImageData(layer.imageData, 0, 0);
+    const scale = Math.min(LAYER_THUMB / layer.imageData.width, LAYER_THUMB / layer.imageData.height, 1);
+    const thumb = document.createElement("canvas");
+    thumb.width = Math.max(1, Math.round(layer.imageData.width * scale));
+    thumb.height = Math.max(1, Math.round(layer.imageData.height * scale));
+    const tctx = thumb.getContext("2d");
+    tctx.imageSmoothingEnabled = scale < 1;
+    tctx.drawImage(layer.canvas, 0, 0, thumb.width, thumb.height);
+    layer.thumbnail = thumb.toDataURL("image/png");
+  }
+
+  // Flattens the visible layers, bottom to top, into the document canvas and this.imageData. Every pixel
+  // in every layer is either opaque or fully transparent, so canvas compositing is exactly "top-most
+  // opaque pixel wins" with no blending or rounding.
+  recomposite() {
+    const bottom = this.layers[0];
+    const width = bottom.imageData.width;
+    const height = bottom.imageData.height;
+    if (this.documentCanvas.width !== width || this.documentCanvas.height !== height) {
+      this.documentCanvas.width = width;
+      this.documentCanvas.height = height;
+    }
+    const ctx = this.documentCanvas.getContext("2d");
+    ctx.clearRect(0, 0, width, height);
+    for (const layer of this.layers) {
+      if (layer.visible) {
+        ctx.drawImage(layer.canvas, 0, 0);
+      }
+    }
+    this.imageData = ctx.getImageData(0, 0, width, height);
+  }
+
+  // Pushes the layer stack's shape (ids, visibility, thumbnails, active layer) into state for rendering.
+  publishLayers() {
+    this.setState({
+      layerList: this.layers.map((layer) => ({ id: layer.id, visible: layer.visible, thumbnail: layer.thumbnail })),
+      activeLayerId: this.activeLayerId,
+      canvasWidth: this.layers[0].imageData.width,
+      canvasHeight: this.layers[0].imageData.height,
+    });
+  }
+
+  // Captures the layer stack as an undo-able snapshot: the array order plus each layer's visibility. Layer
+  // objects (and their pixels) are shared, which is fine because pixel edits have their own history entries
+  // and history is linear, so each snapshot is restored into the state its pixels were in at the time.
+  snapshotLayers() {
+    return { entries: this.layers.map((layer) => ({ layer, visible: layer.visible })), activeLayerId: this.activeLayerId };
+  }
+
+  restoreLayers(snapshot) {
+    const sizeBefore = this.layers[0].imageData.width * 65536 + this.layers[0].imageData.height;
+    this.layers = snapshot.entries.map(({ layer, visible }) => {
+      layer.visible = visible;
+      return layer;
+    });
+    this.activeLayerId = snapshot.activeLayerId;
+    const sizeAfter = this.layers[0].imageData.width * 65536 + this.layers[0].imageData.height;
+    if (sizeBefore !== sizeAfter) {
+      this.resetSelectionForNewSize();
+    }
+    this.recomposite();
+    this.publishLayers();
+    if (sizeBefore !== sizeAfter) {
+      this.zoomToFit();
+    }
+  }
+
+  // Runs a structural change (add / delete / reorder / show / hide) as one undoable history entry.
+  changeLayers(mutate) {
+    const before = this.snapshotLayers();
+    mutate();
+    const after = this.snapshotLayers();
+    this.pushHistory({ type: "layers", before, after });
+    this.recomposite();
+    this.publishLayers();
+  }
+
+  resetSelectionForNewSize() {
+    const { width, height } = this.layers[0].imageData;
+    this.selectionMask = new Uint8Array(width * height);
+    this.selectedCountLive = 0;
+    this.syncMaskCanvas();
+    this.setState({ selectedCount: 0 });
+  }
+
+  onAddEmptyLayer = () => {
+    this.changeLayers(() => {
+      const { width, height } = this.layers[0].imageData;
+      const layer = this.makeLayer(new ImageData(width, height));
+      const activeIndex = this.layers.indexOf(this.activeLayer());
+      this.layers.splice(activeIndex + 1, 0, layer); // directly above the active layer
+      this.activeLayerId = layer.id;
+    });
+  };
+
+  onDeleteLayer = (id) => {
+    if (this.layers.length <= 1) {
+      return; // there is always one layer
+    }
+    this.changeLayers(() => {
+      const index = this.layers.findIndex((layer) => layer.id === id);
+      const wasActive = this.layers[index].id === this.activeLayerId;
+      this.layers.splice(index, 1);
+      if (wasActive) {
+        // the layer above takes over if there is one, otherwise the one below
+        const next = this.layers[index] || this.layers[index - 1];
+        this.activeLayerId = next.id;
+      }
+    });
+  };
+
+  onMoveLayer = (id, direction) => {
+    const index = this.layers.findIndex((layer) => layer.id === id);
+    const target = index + direction; // +1 is up (towards the top of the stack), -1 is down
+    if (target < 0 || target >= this.layers.length) {
       return;
     }
-    if (this.documentCanvas.width !== this.imageData.width || this.documentCanvas.height !== this.imageData.height) {
-      this.documentCanvas.width = this.imageData.width;
-      this.documentCanvas.height = this.imageData.height;
-    }
-    this.documentCanvas.getContext("2d").putImageData(this.imageData, 0, 0);
-  }
+    this.changeLayers(() => {
+      const [layer] = this.layers.splice(index, 1);
+      this.layers.splice(target, 0, layer);
+    });
+  };
+
+  onToggleLayerVisible = (id) => {
+    this.changeLayers(() => {
+      const layer = this.layers.find((candidate) => candidate.id === id);
+      layer.visible = !layer.visible;
+    });
+  };
+
+  onActivateLayer = (id) => {
+    this.activeLayerId = id;
+    this.setState({ activeLayerId: id });
+  };
 
   // Mirrors selectionMask into maskCanvas: opaque white where selected, transparent elsewhere.
   syncMaskCanvas() {
@@ -503,7 +678,7 @@ class ImageEditor extends Component {
   // Writes one pixel, remembering its previous value in the current stroke the first time it is touched.
   // rgba may be a 3-element colour (painted opaque) or a 4-element value (the eraser's transparent).
   setPixel(pixelIndex, rgba) {
-    const data = this.imageData.data;
+    const data = this.activeLayer().imageData.data;
     const i = pixelIndex * 4;
     const alpha = rgba.length > 3 ? rgba[3] : 255;
     if (data[i] === rgba[0] && data[i + 1] === rgba[1] && data[i + 2] === rgba[2] && data[i + 3] === alpha) {
@@ -565,7 +740,7 @@ class ImageEditor extends Component {
 
   // Four-connected flood fill over pixels that exactly match the clicked pixel's RGBA.
   floodFill(startIndex, rgba) {
-    const { width, height, data } = this.imageData;
+    const { width, height, data } = this.activeLayer().imageData; // samples the active layer, like most editors' bucket
     const s = startIndex * 4;
     const target = [data[s], data[s + 1], data[s + 2], data[s + 3]];
     const alpha = rgba.length > 3 ? rgba[3] : 255;
@@ -641,72 +816,26 @@ class ImageEditor extends Component {
     this.afterMaskChange();
   }
 
-  // Lifts the selected pixels (with their positions) into a copied-selection entry and clears the selection.
-  onCopySelection = () => {
+  // Lifts the selected pixels of the composite (what you see) into a new layer directly above the active
+  // one, transparent everywhere else, makes it active, and clears the selection.
+  onCopySelectionToLayer = () => {
     const { width, height, data } = this.imageData;
-    let minX = width;
-    let minY = height;
-    let maxX = -1;
-    let maxY = -1;
-    for (let i = 0; i < this.selectionMask.length; i++) {
-      if (this.selectionMask[i]) {
-        const x = i % width;
-        const y = (i - x) / width;
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-      }
-    }
-    if (maxX < 0) {
+    if (this.selectedCountLive === 0) {
       return;
     }
-    const w = maxX - minX + 1;
-    const h = maxY - minY + 1;
-    const pixels = new Uint8ClampedArray(w * h * 4);
-    const mask = new Uint8Array(w * h);
-    let count = 0;
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const src = (minY + y) * width + (minX + x);
-        if (!this.selectionMask[src]) {
-          continue;
-        }
-        const dst = y * w + x;
-        mask[dst] = 1;
-        pixels.set(data.subarray(src * 4, src * 4 + 4), dst * 4);
-        count++;
+    const pixels = new Uint8ClampedArray(width * height * 4);
+    for (let i = 0; i < this.selectionMask.length; i++) {
+      if (this.selectionMask[i]) {
+        pixels.set(data.subarray(i * 4, i * 4 + 4), i * 4);
       }
     }
-    // thumbnail: only the copied pixels, everything else transparent
-    const thumbCanvas = document.createElement("canvas");
-    thumbCanvas.width = w;
-    thumbCanvas.height = h;
-    thumbCanvas.getContext("2d").putImageData(new ImageData(new Uint8ClampedArray(pixels), w, h), 0, 0);
-    const entry = { id: this.nextClipboardId++, x: minX, y: minY, width: w, height: h, pixels, mask, count, thumbnail: thumbCanvas.toDataURL("image/png") };
-    this.setState((state) => ({ clipboard: [...state.clipboard, entry] }));
+    const layer = this.makeLayer(new ImageData(pixels, width, height));
+    this.changeLayers(() => {
+      const activeIndex = this.layers.indexOf(this.activeLayer());
+      this.layers.splice(activeIndex + 1, 0, layer);
+      this.activeLayerId = layer.id;
+    });
     this.clearSelection();
-  };
-
-  // Writes a copied selection's pixels back exactly where they came from, as one undoable stroke.
-  onPasteClipboardEntry = (entry) => {
-    if (entry.x + entry.width > this.imageData.width || entry.y + entry.height > this.imageData.height) {
-      return; // cannot happen while the canvas size is unchanged, but never write out of bounds
-    }
-    this.currentStroke = new Map();
-    for (let y = 0; y < entry.height; y++) {
-      for (let x = 0; x < entry.width; x++) {
-        const local = y * entry.width + x;
-        if (entry.mask[local]) {
-          this.setPixel((entry.y + y) * this.imageData.width + (entry.x + x), entry.pixels.subarray(local * 4, local * 4 + 4));
-        }
-      }
-    }
-    this.finishStroke();
-  };
-
-  onDeleteClipboardEntry = (id) => {
-    this.setState((state) => ({ clipboard: state.clipboard.filter((entry) => entry.id !== id) }));
   };
 
   // ---------------------------------------------------------------- history
@@ -732,6 +861,7 @@ class ImageEditor extends Component {
     if (stroke.size === 0) {
       return;
     }
+    this.syncLayerCanvas(this.activeLayer()); // the stroke is final: refresh the layer's canvas and thumbnail
     const indices = new Uint32Array(stroke.size);
     const before = new Uint8ClampedArray(stroke.size * 4);
     const after = new Uint8ClampedArray(stroke.size * 4);
@@ -739,31 +869,22 @@ class ImageEditor extends Component {
     for (const [pixelIndex, previous] of stroke) {
       indices[k] = pixelIndex;
       before.set(previous, k * 4);
-      after.set(this.imageData.data.subarray(pixelIndex * 4, pixelIndex * 4 + 4), k * 4);
+      after.set(this.activeLayer().imageData.data.subarray(pixelIndex * 4, pixelIndex * 4 + 4), k * 4);
       k++;
     }
-    this.pushHistory({ type: "pixels", indices, before, after });
+    this.pushHistory({ type: "pixels", layerId: this.activeLayer().id, indices, before, after });
   }
 
-  applyPixels(indices, values) {
-    const data = this.imageData.data;
+  applyPixels(layerId, indices, values) {
+    const layer = this.layers.find((candidate) => candidate.id === layerId);
+    if (layer === undefined) {
+      return; // the layer was deleted after this stroke; its deletion is its own history entry
+    }
+    const data = layer.imageData.data;
     for (let k = 0; k < indices.length; k++) {
       data.set(values.subarray(k * 4, k * 4 + 4), indices[k] * 4);
     }
-  }
-
-  applySnapshot(snapshot) {
-    const sizeChanged = snapshot.width !== this.imageData.width || snapshot.height !== this.imageData.height;
-    this.imageData = new ImageData(new Uint8ClampedArray(snapshot.data), snapshot.width, snapshot.height);
-    this.syncDocumentCanvas();
-    if (sizeChanged) {
-      // positions in the selection and in copied selections only mean something at the size they were made
-      this.selectionMask = new Uint8Array(snapshot.width * snapshot.height);
-      this.selectedCountLive = 0;
-      this.syncMaskCanvas();
-      this.setState({ selectedCount: 0, clipboard: [] });
-    }
-    this.setState({ canvasWidth: snapshot.width, canvasHeight: snapshot.height }, () => this.zoomToFit());
+    this.syncLayerCanvas(layer);
   }
 
   undo = () => {
@@ -773,9 +894,9 @@ class ImageEditor extends Component {
     const entry = this.undoStack.pop();
     this.redoStack.push(entry);
     if (entry.type === "pixels") {
-      this.applyPixels(entry.indices, entry.before);
+      this.applyPixels(entry.layerId, entry.indices, entry.before);
     } else {
-      this.applySnapshot(entry.before);
+      this.restoreLayers(entry.before);
     }
     this.afterChange();
   };
@@ -787,15 +908,16 @@ class ImageEditor extends Component {
     const entry = this.redoStack.pop();
     this.undoStack.push(entry);
     if (entry.type === "pixels") {
-      this.applyPixels(entry.indices, entry.after);
+      this.applyPixels(entry.layerId, entry.indices, entry.after);
     } else {
-      this.applySnapshot(entry.after);
+      this.restoreLayers(entry.after);
     }
     this.afterChange();
   };
 
   afterChange() {
-    this.syncDocumentCanvas();
+    this.recomposite();
+    this.publishLayers();
     this.redraw();
     this.setState((state) => ({
       undoDepth: this.undoStack.length,
@@ -814,11 +936,24 @@ class ImageEditor extends Component {
     if (currentMaterialsData.pixelsData === null || currentMaterialsData.pixelsData.length !== width * height * 4) {
       return;
     }
-    const before = new ImageData(new Uint8ClampedArray(this.imageData.data), this.imageData.width, this.imageData.height);
-    const after = new ImageData(new Uint8ClampedArray(currentMaterialsData.pixelsData), width, height);
-    this.applySnapshot(after);
-    this.pushHistory({ type: "snapshot", before, after });
+    const opened = this.makeLayer(new ImageData(new Uint8ClampedArray(currentMaterialsData.pixelsData), width, height));
+    const sizeChanged = width !== this.layers[0].imageData.width || height !== this.layers[0].imageData.height;
+    this.changeLayers(() => {
+      if (sizeChanged) {
+        this.layers = [opened]; // layers are always the canvas size, so a new size means a fresh stack
+      } else {
+        this.layers.push(opened); // on top of everything
+      }
+      this.activeLayerId = opened.id;
+    });
+    if (sizeChanged) {
+      this.resetSelectionForNewSize();
+      this.zoomToFit();
+    }
     this.setState({ openedBaseFilename: this.props.uploadedImage_baseFilename });
+    if (this.detailsRef.current !== null) {
+      this.detailsRef.current.open = true; // the button lives in the collapsed header too
+    }
   };
 
   // The name of the image that was opened into the editor, falling back to the current upload.
@@ -862,7 +997,9 @@ class ImageEditor extends Component {
     if (this.drag.target === "mask") {
       this.syncMaskCanvas();
     } else {
-      this.syncDocumentCanvas();
+      const layer = this.activeLayer();
+      layer.canvas.getContext("2d").putImageData(layer.imageData, 0, 0); // thumbnail waits for the stroke to end
+      this.recomposite();
     }
     this.redraw();
   }
@@ -1132,7 +1269,8 @@ class ImageEditor extends Component {
       panning,
       selectionMode,
       selectedCount,
-      clipboard,
+      layerList,
+      activeLayerId,
       copyStatus,
     } = this.state;
     const palette = this.getPalette();
@@ -1155,20 +1293,27 @@ class ImageEditor extends Component {
     );
 
     return (
-      <details className="section boxed imageEditorDiv">
+      <details className="section boxed imageEditorDiv" ref={this.detailsRef}>
         <summary className="imageEditorSummary">
           <h2>{getLocaleString("IMAGE-EDITOR/TITLE")}</h2>
+          <Tooltip tooltipText={getLocaleString("IMAGE-EDITOR/COPY-FROM-PREVIEW-TT")}>
+            <button
+              className="editorToolButton imageEditorHeaderButton"
+              disabled={!canCopy}
+              onClick={(e) => {
+                e.preventDefault(); // a click inside <summary> would otherwise toggle the panel
+                e.stopPropagation();
+                this.onCopyFromPreview();
+              }}
+            >
+              {getLocaleString("IMAGE-EDITOR/COPY-FROM-PREVIEW")}
+            </button>
+          </Tooltip>
         </summary>
         <div className="imageEditorSubtitle">{getLocaleString("IMAGE-EDITOR/SUBTITLE")}</div>
         <div className="imageEditorSubtitle">{getLocaleString("IMAGE-EDITOR/SHORTCUTS")}</div>
 
         <div className="editorToolbar">
-          <Tooltip tooltipText={getLocaleString("IMAGE-EDITOR/COPY-FROM-PREVIEW-TT")}>
-            <button className="editorToolButton" onClick={this.onCopyFromPreview} disabled={!canCopy}>
-              {getLocaleString("IMAGE-EDITOR/COPY-FROM-PREVIEW")}
-            </button>
-          </Tooltip>
-          <span className="editorToolbarSpacer" />
           <button
             className={`editorToolButton editorToggleButton${selectionMode ? " editorToggleButton_on" : ""}`}
             onClick={this.onToggleSelectionMode}
@@ -1177,7 +1322,7 @@ class ImageEditor extends Component {
             {getLocaleString("IMAGE-EDITOR/SELECTION-MODE")}
           </button>
           {selectionMode && (
-            <button className="editorToolButton" onClick={this.onCopySelection} disabled={selectedCount === 0}>
+            <button className="editorToolButton" onClick={this.onCopySelectionToLayer} disabled={selectedCount === 0}>
               {getLocaleString("IMAGE-EDITOR/COPY-SELECTION")}
             </button>
           )}
@@ -1237,11 +1382,79 @@ class ImageEditor extends Component {
                 />
               </div>
             </div>
+
+            <div className="editorLayers">
+              {[...layerList].reverse().map((layer, displayIndex) => {
+                const isTop = displayIndex === 0;
+                const isBottom = displayIndex === layerList.length - 1;
+                const isActive = layer.id === activeLayerId;
+                return (
+                  <div
+                    key={layer.id}
+                    className={`editorLayerRow${isActive ? " editorLayerRow_active" : ""}`}
+                    onClick={() => this.onActivateLayer(layer.id)}
+                    title={isActive ? undefined : getLocaleString("IMAGE-EDITOR/LAYER-ACTIVATE")}
+                  >
+                    <button
+                      className="editorToolButton editorIconButton"
+                      title={getLocaleString("IMAGE-EDITOR/LAYER-VISIBLE")}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        this.onToggleLayerVisible(layer.id);
+                      }}
+                    >
+                      {layer.visible ? ICONS.eyeOpen : ICONS.eyeClosed}
+                    </button>
+                    <img className={`editorLayerThumb${layer.visible ? "" : " editorLayerThumb_hidden"}`} src={layer.thumbnail} alt="" />
+                    <span className="editorLayerSpacer" />
+                    <button
+                      className="editorToolButton editorIconButton"
+                      title={getLocaleString("IMAGE-EDITOR/LAYER-DELETE")}
+                      disabled={layerList.length <= 1}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        this.onDeleteLayer(layer.id);
+                      }}
+                    >
+                      {ICONS.trash}
+                    </button>
+                    <span className="editorLayerArrows">
+                      <button
+                        className="editorToolButton editorIconButton editorLayerArrow"
+                        title={getLocaleString("IMAGE-EDITOR/LAYER-UP")}
+                        disabled={isTop}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          this.onMoveLayer(layer.id, 1);
+                        }}
+                      >
+                        {ICONS.chevronUp}
+                      </button>
+                      <button
+                        className="editorToolButton editorIconButton editorLayerArrow"
+                        title={getLocaleString("IMAGE-EDITOR/LAYER-DOWN")}
+                        disabled={isBottom}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          this.onMoveLayer(layer.id, -1);
+                        }}
+                      >
+                        {ICONS.chevronDown}
+                      </button>
+                    </span>
+                  </div>
+                );
+              })}
+              <button className="editorToolButton editorIconButton editorLayerAdd" title={getLocaleString("IMAGE-EDITOR/LAYER-ADD")} onClick={this.onAddEmptyLayer}>
+                {ICONS.plus}
+              </button>
+            </div>
           </div>
 
           <div className="editorPaletteColumn">
-            <div>
-              <b>{getLocaleString("IMAGE-EDITOR/PALETTE")}</b> <small className="editorPaletteNote">{getLocaleString("IMAGE-EDITOR/PALETTE-NOTE")}</small>
+            <div className="editorPaletteHeading">
+              <b>{getLocaleString("IMAGE-EDITOR/PALETTE")}</b>
+              <small className="editorPaletteNote">{getLocaleString("IMAGE-EDITOR/PALETTE-NOTE")}</small>
             </div>
             <div className="editorPalette">
               {palette.map(({ colourSetId, toneKey, rgb, label }) => {
@@ -1280,30 +1493,6 @@ class ImageEditor extends Component {
             </div>
           </div>
         </div>
-
-        {clipboard.length > 0 && (
-          <div className="editorClipboard">
-            <b>{getLocaleString("IMAGE-EDITOR/COPIED-SELECTIONS")}</b>
-            {clipboard.map((entry) => (
-              <div key={entry.id} className="editorClipboardEntry">
-                <img
-                  className="editorClipboardThumb"
-                  src={entry.thumbnail}
-                  alt=""
-                  title={`${entry.width}x${entry.height} @ ${entry.x},${entry.y} \u00b7 ${entry.count} px`}
-                  style={entry.width >= entry.height ? { width: `${THUMBNAIL_MAX}px` } : { height: `${THUMBNAIL_MAX}px` }}
-                />
-                <span className="editorClipboardDash">{"\u2014"}</span>
-                <button className="editorToolButton" onClick={() => this.onPasteClipboardEntry(entry)}>
-                  {getLocaleString("IMAGE-EDITOR/PASTE-TO-CANVAS")}
-                </button>
-                <button className="editorToolButton editorClipboardDelete" onClick={() => this.onDeleteClipboardEntry(entry.id)} title={getLocaleString("IMAGE-EDITOR/DELETE-COPIED")}>
-                  {"\u00d7"}
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
 
         <div className="editorDownloads">
           <b>{getLocaleString("IMAGE-EDITOR/DOWNLOAD-EDITED")}</b>

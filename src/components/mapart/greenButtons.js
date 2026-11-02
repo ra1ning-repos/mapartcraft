@@ -31,6 +31,18 @@ class GreenButtons extends Component {
     });
   }
 
+  // Map .dat files are either numbered from the chosen start id or named after the image. Numbered files
+  // are "map_7.dat" for Minecraft up to 1.21.x and plain "7.dat" from 26.1 (snapshot 6) on, where they also
+  // moved to data/minecraft/maps/ and idcounts.dat became last_id.dat.
+  mapdatFilename(whichMap_x, whichMap_y) {
+    const { optionValue_mapdatFilenameUseId, optionValue_mapdatFilenameIdStart, optionValue_mapdatModernNaming, optionValue_mapSize_x, uploadedImage_baseFilename } = this.props;
+    if (!optionValue_mapdatFilenameUseId) {
+      return `${uploadedImage_baseFilename}_${whichMap_x.toString()}_${whichMap_y.toString()}.dat`;
+    }
+    const id = (optionValue_mapdatFilenameIdStart + whichMap_y * optionValue_mapSize_x + whichMap_x).toString();
+    return optionValue_mapdatModernNaming ? `${id}.dat` : `map_${id}.dat`;
+  }
+
   getNBT_base = (workerHeader) => {
     const {
       getLocaleString,
@@ -41,8 +53,6 @@ class GreenButtons extends Component {
       optionValue_staircasing,
       optionValue_whereSupportBlocks,
       optionValue_supportBlock,
-      optionValue_mapdatFilenameUseId,
-      optionValue_mapdatFilenameIdStart,
       uploadedImage_baseFilename,
       currentMaterialsData,
       mapPreviewWorker_inProgress,
@@ -102,9 +112,7 @@ class GreenButtons extends Component {
           const { Mapdat_Bytes, whichMap_x, whichMap_y } = e.data.body;
           const Mapdat_Bytes_gzipped = gzip(Mapdat_Bytes);
           const downloadBlob = new Blob([Mapdat_Bytes_gzipped], { type: "application/x-minecraft-level" });
-          downloadBlobFile(downloadBlob, optionValue_mapdatFilenameUseId
-            ? `map_${(optionValue_mapdatFilenameIdStart + whichMap_y * optionValue_mapSize_x + whichMap_x).toString()}.dat`
-            : `${uploadedImage_baseFilename}_${whichMap_x.toString()}_${whichMap_y.toString()}.dat`);
+          downloadBlobFile(downloadBlob, this.mapdatFilename(whichMap_x, whichMap_y));
           break;
         }
         case "MAPDAT_BYTES_ZIP": {
@@ -114,9 +122,7 @@ class GreenButtons extends Component {
           const { Mapdat_Bytes, whichMap_x, whichMap_y } = e.data.body;
           const Mapdat_Bytes_gzipped = gzip(Mapdat_Bytes);
           zipFile.file(
-            optionValue_mapdatFilenameUseId
-              ? `map_${(optionValue_mapdatFilenameIdStart + whichMap_y * optionValue_mapSize_x + whichMap_x).toString()}.dat`
-              : `${uploadedImage_baseFilename}_${whichMap_x.toString()}_${whichMap_y.toString()}.dat`,
+            this.mapdatFilename(whichMap_x, whichMap_y),
             Mapdat_Bytes_gzipped
           );
           if (numberOfSplitsCalculated === optionValue_mapSize_x * optionValue_mapSize_y) {
@@ -184,6 +190,7 @@ class GreenButtons extends Component {
       optionValue_transparencyTolerance,
       optionValue_mapdatFilenameUseId,
       optionValue_mapdatFilenameIdStart,
+      optionValue_mapdatModernNaming,
       optionValue_betterColour,
       optionValue_dithering,
       optionValue_dithering_propagation_red,
@@ -223,6 +230,7 @@ class GreenButtons extends Component {
       prevProps.optionValue_transparencyTolerance !== optionValue_transparencyTolerance,
       prevProps.optionValue_mapdatFilenameUseId !== optionValue_mapdatFilenameUseId,
       prevProps.optionValue_mapdatFilenameIdStart !== optionValue_mapdatFilenameIdStart,
+      prevProps.optionValue_mapdatModernNaming !== optionValue_mapdatModernNaming,
       prevProps.optionValue_betterColour !== optionValue_betterColour,
       prevProps.optionValue_dithering !== optionValue_dithering,
       prevProps.optionValue_dithering_propagation_red !== optionValue_dithering_propagation_red,

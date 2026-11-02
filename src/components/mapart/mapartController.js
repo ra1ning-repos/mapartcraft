@@ -57,8 +57,9 @@ class MapartController extends Component {
     optionValue_transparencyTolerance: 128,
     optionValue_mapdatFilenameUseId: true,
     optionValue_mapdatFilenameIdStart: 0,
+    optionValue_mapdatModernNaming: false, // 26.1+ names map files "7.dat" instead of "map_7.dat"
     optionValue_betterColour: ColourMethods.Hct.uniqueId,
-    optionValue_dithering: DitherMethods.FloydSteinberg_24.uniqueId,
+    optionValue_dithering: DitherMethods.Rain_32.uniqueId,
     optionValue_dithering_propagation_red: SettingDefaults.optionValue_dithering_propagation_red,
     optionValue_dithering_propagation_green: SettingDefaults.optionValue_dithering_propagation_green,
     optionValue_dithering_propagation_blue: SettingDefaults.optionValue_dithering_propagation_blue,
@@ -434,6 +435,10 @@ class MapartController extends Component {
     });
   };
 
+  onOptionChange_mapdatModernNaming = () => {
+    this.setState({ optionValue_mapdatModernNaming: !this.state.optionValue_mapdatModernNaming });
+  };
+
   onOptionChange_mapdatFilenameIdStart = (value) => {
     this.setState({
       optionValue_mapdatFilenameIdStart: value,
@@ -655,7 +660,7 @@ class MapartController extends Component {
     if (!next) {
       const current = Object.values(DitherMethods).find((ditherMethod) => ditherMethod.uniqueId === this.state.optionValue_dithering);
       if (current === undefined || !("simpleOrder" in current)) {
-        update.optionValue_dithering = DitherMethods.FloydSteinberg_24.uniqueId; // the hidden pick would have no entry to show
+        update.optionValue_dithering = DitherMethods.Rain_32.uniqueId; // the hidden pick would have no entry to show
       }
     }
     this.setState(update);
@@ -1033,6 +1038,7 @@ class MapartController extends Component {
       optionValue_transparencyTolerance,
       optionValue_mapdatFilenameUseId,
       optionValue_mapdatFilenameIdStart,
+      optionValue_mapdatModernNaming,
       optionValue_betterColour,
       optionValue_dithering,
       optionValue_dithering_propagation_red,
@@ -1106,6 +1112,8 @@ class MapartController extends Component {
             onOptionChange_mapdatFilenameUseId={this.onOptionChange_mapdatFilenameUseId}
             optionValue_mapdatFilenameIdStart={optionValue_mapdatFilenameIdStart}
             onOptionChange_mapdatFilenameIdStart={this.onOptionChange_mapdatFilenameIdStart}
+            optionValue_mapdatModernNaming={optionValue_mapdatModernNaming}
+            onOptionChange_mapdatModernNaming={this.onOptionChange_mapdatModernNaming}
             optionValue_betterColour={optionValue_betterColour}
             onOptionChange_BetterColour={this.onOptionChange_BetterColour}
             optionValue_dithering={optionValue_dithering}
@@ -1174,6 +1182,7 @@ class MapartController extends Component {
             optionValue_transparencyTolerance={optionValue_transparencyTolerance}
             optionValue_mapdatFilenameUseId={optionValue_mapdatFilenameUseId}
             optionValue_mapdatFilenameIdStart={optionValue_mapdatFilenameIdStart}
+            optionValue_mapdatModernNaming={optionValue_mapdatModernNaming}
             optionValue_betterColour={optionValue_betterColour}
             optionValue_dithering={optionValue_dithering}
             optionValue_dithering_propagation_red={optionValue_dithering_propagation_red}
@@ -1264,6 +1273,7 @@ class MapartController extends Component {
               optionValue_transparencyTolerance={optionValue_transparencyTolerance}
               optionValue_mapdatFilenameUseId={optionValue_mapdatFilenameUseId}
               optionValue_mapdatFilenameIdStart={optionValue_mapdatFilenameIdStart}
+              optionValue_mapdatModernNaming={optionValue_mapdatModernNaming}
               optionValue_betterColour={optionValue_betterColour}
               optionValue_dithering={optionValue_dithering}
               optionValue_dithering_propagation_red={optionValue_dithering_propagation_red}

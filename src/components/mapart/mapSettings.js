@@ -60,6 +60,8 @@ class MapSettings extends Component {
       onOptionChange_mapdatFilenameUseId,
       optionValue_mapdatFilenameIdStart,
       onOptionChange_mapdatFilenameIdStart,
+      optionValue_mapdatModernNaming,
+      onOptionChange_mapdatModernNaming,
       optionValue_betterColour,
       onOptionChange_BetterColour,
       optionValue_dithering,
@@ -416,6 +418,7 @@ class MapSettings extends Component {
       </tr>
     ) : null;
     let settings_mapModeConditional = null;
+    let settings_mapdatFilenameRows = null; // map.dat only; rendered in Advanced options under Mode
     if (!isNBT) {
       let setting_transparency = (
         <tr>
@@ -526,22 +529,32 @@ class MapSettings extends Component {
           </tr>
         );
       }
-      let settingGroup_mapdatFilename = (
-        <div className={optionValue_mapdatFilenameUseId ? "settingsGroup" : null}>
-          <table>
-            <tbody>
-              {setting_mapdatFilenameUseId}
-              {setting_mapdatFilenameIdStart}
-            </tbody>
-          </table>
-        </div>
-      );
-      settings_mapModeConditional = (
+      let setting_mapdatModernNaming = null;
+      if (optionValue_mapdatFilenameUseId) {
+        setting_mapdatModernNaming = (
+          <tr>
+            <th>
+              <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/MAPDAT-SPECIFIC/MODERN-NAMING-TT")}>
+                <b>
+                  {getLocaleString("MAP-SETTINGS/MAPDAT-SPECIFIC/MODERN-NAMING")}
+                  {":"}
+                </b>
+              </Tooltip>{" "}
+            </th>
+            <td>
+              <input type="checkbox" checked={optionValue_mapdatModernNaming} onChange={onOptionChange_mapdatModernNaming} />
+            </td>
+          </tr>
+        );
+      }
+      settings_mapdatFilenameRows = (
         <React.Fragment>
-          {settingGroup_transparency}
-          {settingGroup_mapdatFilename}
+          {setting_mapdatFilenameUseId}
+          {setting_mapdatFilenameIdStart}
+          {setting_mapdatModernNaming}
         </React.Fragment>
       );
+      settings_mapModeConditional = settingGroup_transparency;
     }
     const setting_betterColour = (
       <React.Fragment>
@@ -1341,6 +1354,7 @@ class MapSettings extends Component {
               {setting_whereSupportBlocks}
               {setting_supportBlock}
               {setting_mode}
+              {settings_mapdatFilenameRows}
               {setting_downscaleMethod}
               {setting_dithering_advancedStrength}
               {setting_extras_moreStaircasingOptions}
