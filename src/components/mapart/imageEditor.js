@@ -144,6 +144,7 @@ class ImageEditor extends Component {
     activeLayerId: null,
     copyStatus: null, // "copied" | "downloaded" briefly after the Copy image button, else null
     openedBaseFilename: null, // base filename of the image that was last opened into the editor
+    editorOpen: false, // whether the <details> is expanded; the header button only shows while it is
     revision: 0, // bumped on every change so the palette/warnings re-render
   };
 
@@ -189,6 +190,8 @@ class ImageEditor extends Component {
     // React registers wheel listeners as passive, which forbids preventDefault; Ctrl+wheel must not also
     // zoom the browser, so the listener goes on the element directly.
     this.canvasRef.current.addEventListener("wheel", this.onWheel, { passive: false });
+    this.detailsRef.current.addEventListener("toggle", this.onDetailsToggle);
+    this.setState({ editorOpen: this.detailsRef.current.open });
     this.scheduleMaterials();
   }
 
@@ -225,6 +228,9 @@ class ImageEditor extends Component {
     window.removeEventListener("keydown", this.onKeyDown);
     if (this.canvasRef.current !== null) {
       this.canvasRef.current.removeEventListener("wheel", this.onWheel);
+    }
+    if (this.detailsRef.current !== null) {
+      this.detailsRef.current.removeEventListener("toggle", this.onDetailsToggle);
     }
     clearTimeout(this.materialsTimer);
     clearTimeout(this.copyStatusTimer);
@@ -392,19 +398,18 @@ class ImageEditor extends Component {
     });
   }
 
-  // Captures the layer stack as an undo-able snapshot: the array order plus each layer's visibility. Layer
-  // objects (and their pixels) are shared, which is fine because pixel edits have their own history entries
-  // and history is linear, so each snapshot is restored into the state its pixels were in at the time.
+  // Layer objects (and their pixels) are shared between snapshots, which is fine because pixel edits have
+  // their own history entries and history is linear, so each snapshot is restored into the state its
+  // pixels were in at the time.
+  // Captures the layer stack's order and the active layer. Visibility is deliberately not part of it:
+  // showing and hiding layers is a viewing choice, not an edit, so undo leaves it alone.
   snapshotLayers() {
-    return { entries: this.layers.map((layer) => ({ layer, visible: layer.visible })), activeLayerId: this.activeLayerId };
+    return { layers: [...this.layers], activeLayerId: this.activeLayerId };
   }
 
   restoreLayers(snapshot) {
     const sizeBefore = this.layers[0].imageData.width * 65536 + this.layers[0].imageData.height;
-    this.layers = snapshot.entries.map(({ layer, visible }) => {
-      layer.visible = visible;
-      return layer;
-    });
+    this.layers = [...snapshot.layers];
     this.activeLayerId = snapshot.activeLayerId;
     const sizeAfter = this.layers[0].imageData.width * 65536 + this.layers[0].imageData.height;
     if (sizeBefore !== sizeAfter) {
@@ -417,12 +422,13 @@ class ImageEditor extends Component {
     }
   }
 
-  // Runs a structural change (add / delete / reorder / show / hide) as one undoable history entry.
-  changeLayers(mutate) {
+  // Runs a structural change (add / delete / reorder) as one undoable history entry. A mask diff may ride
+  // along so that, say, copying a selection to a layer and clearing the selection undo as one step.
+  changeLayers(mutate, mask = null) {
     const before = this.snapshotLayers();
     mutate();
     const after = this.snapshotLayers();
-    this.pushHistory({ type: "layers", before, after });
+    this.pushHistory({ type: "layers", before, after, mask });
     this.recomposite();
     this.publishLayers();
   }
@@ -473,11 +479,14 @@ class ImageEditor extends Component {
     });
   };
 
+  // Not an edit, so not in the undo history (see snapshotLayers).
   onToggleLayerVisible = (id) => {
-    this.changeLayers(() => {
-      const layer = this.layers.find((candidate) => candidate.id === id);
-      layer.visible = !layer.visible;
-    });
+    const layer = this.layers.find((candidate) => candidate.id === id);
+    layer.visible = !layer.visible;
+    this.recomposite();
+    this.publishLayers();
+    this.redraw();
+    this.scheduleMaterials();
   };
 
   onActivateLayer = (id) => {
@@ -695,8 +704,52 @@ class ImageEditor extends Component {
 
   setMaskPixel(pixelIndex, value) {
     if (this.selectionMask[pixelIndex] !== value) {
+      if (this.currentMaskStroke !== null && !this.currentMaskStroke.has(pixelIndex)) {
+        this.currentMaskStroke.set(pixelIndex, this.selectionMask[pixelIndex]);
+      }
       this.selectionMask[pixelIndex] = value;
       this.selectedCountLive += value ? 1 : -1;
+    }
+  }
+
+  currentMaskStroke = null; // Map<pixelIndex, previous mask value> while a selection stroke / fill is in progress
+
+  // Turns the recorded mask changes into a history entry ({ type: "mask", indices, before, after }) and
+  // returns it, or null if nothing changed. The caller decides whether it goes in the history on its own.
+  takeMaskDiff() {
+    const stroke = this.currentMaskStroke;
+    this.currentMaskStroke = null;
+    if (stroke === null || stroke.size === 0) {
+      return null;
+    }
+    const indices = new Uint32Array(stroke.size);
+    const before = new Uint8Array(stroke.size);
+    const after = new Uint8Array(stroke.size);
+    let k = 0;
+    for (const [pixelIndex, previous] of stroke) {
+      indices[k] = pixelIndex;
+      before[k] = previous;
+      after[k] = this.selectionMask[pixelIndex];
+      k++;
+    }
+    return { type: "mask", indices, before, after };
+  }
+
+  finishMaskStroke() {
+    const diff = this.takeMaskDiff();
+    if (diff !== null) {
+      this.pushHistory(diff);
+    }
+    this.afterMaskChange();
+  }
+
+  applyMask(indices, values) {
+    for (let k = 0; k < indices.length; k++) {
+      const pixelIndex = indices[k];
+      if (this.selectionMask[pixelIndex] !== values[k]) {
+        this.selectedCountLive += values[k] ? 1 : -1;
+        this.selectionMask[pixelIndex] = values[k];
+      }
     }
   }
 
@@ -810,10 +863,24 @@ class ImageEditor extends Component {
     this.redraw();
   }
 
+  // Clears the selection as an undoable step of its own.
   clearSelection() {
-    this.selectionMask.fill(0);
-    this.selectedCountLive = 0;
+    const diff = this.clearSelectionDiff();
+    if (diff !== null) {
+      this.pushHistory(diff);
+    }
     this.afterMaskChange();
+  }
+
+  // Clears the selection and returns the mask diff describing it (null if nothing was selected).
+  clearSelectionDiff() {
+    this.currentMaskStroke = new Map();
+    for (let i = 0; i < this.selectionMask.length; i++) {
+      if (this.selectionMask[i]) {
+        this.setMaskPixel(i, 0);
+      }
+    }
+    return this.takeMaskDiff();
   }
 
   // Lifts the selected pixels of the composite (what you see) into a new layer directly above the active
@@ -830,18 +897,20 @@ class ImageEditor extends Component {
       }
     }
     const layer = this.makeLayer(new ImageData(pixels, width, height));
+    const maskDiff = this.clearSelectionDiff(); // the layer and the cleared selection undo together
     this.changeLayers(() => {
       const activeIndex = this.layers.indexOf(this.activeLayer());
       this.layers.splice(activeIndex + 1, 0, layer);
       this.activeLayerId = layer.id;
-    });
-    this.clearSelection();
+    }, maskDiff);
+    this.afterMaskChange();
   };
 
   // ---------------------------------------------------------------- history
 
-  // A history entry is either a pixel diff ({ type: "pixels", indices, before, after }) or a whole
-  // snapshot ({ type: "snapshot", before: ImageData, after: ImageData }) for edits that resize.
+  // A history entry is a pixel diff on one layer ({ type: "pixels", layerId, indices, before, after }), a
+  // selection-mask diff ({ type: "mask", indices, before, after }), or a layer-stack change
+  // ({ type: "layers", before, after, mask }) which may carry a mask diff of its own.
   pushHistory(entry) {
     this.undoStack.push(entry);
     if (this.undoStack.length > HISTORY_LIMIT) {
@@ -888,36 +957,50 @@ class ImageEditor extends Component {
   }
 
   undo = () => {
-    if (this.currentStroke !== null || this.undoStack.length === 0) {
+    if (this.currentStroke !== null || this.currentMaskStroke !== null || this.undoStack.length === 0) {
       return;
     }
     const entry = this.undoStack.pop();
     this.redoStack.push(entry);
-    if (entry.type === "pixels") {
-      this.applyPixels(entry.layerId, entry.indices, entry.before);
-    } else {
-      this.restoreLayers(entry.before);
-    }
+    this.applyHistoryEntry(entry, "before");
     this.afterChange();
   };
 
   redo = () => {
-    if (this.currentStroke !== null || this.redoStack.length === 0) {
+    if (this.currentStroke !== null || this.currentMaskStroke !== null || this.redoStack.length === 0) {
       return;
     }
     const entry = this.redoStack.pop();
     this.undoStack.push(entry);
-    if (entry.type === "pixels") {
-      this.applyPixels(entry.layerId, entry.indices, entry.after);
-    } else {
-      this.restoreLayers(entry.after);
-    }
+    this.applyHistoryEntry(entry, "after");
     this.afterChange();
   };
+
+  // direction is "before" (undo) or "after" (redo)
+  applyHistoryEntry(entry, direction) {
+    switch (entry.type) {
+      case "pixels":
+        this.applyPixels(entry.layerId, entry.indices, entry[direction]);
+        break;
+      case "mask":
+        this.applyMask(entry.indices, entry[direction]);
+        break;
+      case "layers":
+        this.restoreLayers(entry[direction]);
+        if (entry.mask !== null && entry.mask !== undefined) {
+          this.applyMask(entry.mask.indices, entry.mask[direction]);
+        }
+        break;
+      default:
+        break;
+    }
+  }
 
   afterChange() {
     this.recomposite();
     this.publishLayers();
+    this.syncMaskCanvas();
+    this.setState({ selectedCount: this.selectedCountLive });
     this.redraw();
     this.setState((state) => ({
       undoDepth: this.undoStack.length,
@@ -951,9 +1034,6 @@ class ImageEditor extends Component {
       this.zoomToFit();
     }
     this.setState({ openedBaseFilename: this.props.uploadedImage_baseFilename });
-    if (this.detailsRef.current !== null) {
-      this.detailsRef.current.open = true; // the button lives in the collapsed header too
-    }
   };
 
   // The name of the image that was opened into the editor, falling back to the current upload.
@@ -986,6 +1066,8 @@ class ImageEditor extends Component {
     this.drag = { mode: "paint", target, value };
     if (target === "image") {
       this.currentStroke = new Map();
+    } else {
+      this.currentMaskStroke = new Map();
     }
     this.applyPaint(pixelIndex);
     this.lastPaintedPixel = pixelIndex;
@@ -1045,9 +1127,10 @@ class ImageEditor extends Component {
         }
         if (selectionMode) {
           this.drag = { mode: "paint", target: "mask", value: 1 }; // so redraw shows the hatch immediately
+          this.currentMaskStroke = new Map();
           this.floodFillMask(pixelIndex);
           this.drag = null;
-          this.afterMaskChange();
+          this.finishMaskStroke();
         } else if (brushColour !== null) {
           this.currentStroke = new Map();
           this.floodFill(pixelIndex, brushColour);
@@ -1108,10 +1191,14 @@ class ImageEditor extends Component {
     if (mode === "pan") {
       this.setState({ panning: false });
     } else if (target === "mask") {
-      this.afterMaskChange();
+      this.finishMaskStroke();
     } else {
       this.finishStroke();
     }
+  };
+
+  onDetailsToggle = () => {
+    this.setState({ editorOpen: this.detailsRef.current.open });
   };
 
   onToggleSelectionMode = () => {
@@ -1272,6 +1359,7 @@ class ImageEditor extends Component {
       layerList,
       activeLayerId,
       copyStatus,
+      editorOpen,
     } = this.state;
     const palette = this.getPalette();
     const brushIsAir = isAir(brushColour);
@@ -1296,19 +1384,21 @@ class ImageEditor extends Component {
       <details className="section boxed imageEditorDiv" ref={this.detailsRef}>
         <summary className="imageEditorSummary">
           <h2>{getLocaleString("IMAGE-EDITOR/TITLE")}</h2>
-          <Tooltip tooltipText={getLocaleString("IMAGE-EDITOR/COPY-FROM-PREVIEW-TT")}>
-            <button
-              className="editorToolButton imageEditorHeaderButton"
-              disabled={!canCopy}
-              onClick={(e) => {
-                e.preventDefault(); // a click inside <summary> would otherwise toggle the panel
-                e.stopPropagation();
-                this.onCopyFromPreview();
-              }}
-            >
-              {getLocaleString("IMAGE-EDITOR/COPY-FROM-PREVIEW")}
-            </button>
-          </Tooltip>
+          {editorOpen && (
+            <Tooltip tooltipText={getLocaleString("IMAGE-EDITOR/COPY-FROM-PREVIEW-TT")}>
+              <button
+                className="editorToolButton imageEditorHeaderButton"
+                disabled={!canCopy}
+                onClick={(e) => {
+                  e.preventDefault(); // a click inside <summary> would otherwise toggle the panel
+                  e.stopPropagation();
+                  this.onCopyFromPreview();
+                }}
+              >
+                {getLocaleString("IMAGE-EDITOR/COPY-FROM-PREVIEW")}
+              </button>
+            </Tooltip>
+          )}
         </summary>
         <div className="imageEditorSubtitle">{getLocaleString("IMAGE-EDITOR/SUBTITLE")}</div>
         <div className="imageEditorSubtitle">{getLocaleString("IMAGE-EDITOR/SHORTCUTS")}</div>

@@ -514,12 +514,8 @@ class MapSettings extends Component {
                 validators={[(t) => !isNaN(t), (t) => t >= 0]}
                 onValidInput={onOptionChange_mapdatFilenameIdStart}
                 style={{ width: "3em" }}
-              />
-            </td>
-            <td>
-              <b>{"-"}</b>
-            </td>
-            <td>
+              />{" "}
+              <b>{"-"}</b>{" "}
               <BufferedNumberInput
                 value={-1 + optionValue_mapdatFilenameIdStart + optionValue_mapSize_x * optionValue_mapSize_y}
                 disabled={true}
