@@ -62,3 +62,29 @@
   background-color: #688e6b;
   height: 100%;
 }
+
+/* Progress and notes from PNG-to-NBT, under the download buttons. */
+.schematicNotice {
+  width: 300px;
+  box-sizing: border-box;
+  margin: 0.3em 0;
+  padding: 0.3em 0.5em;
+  font-size: 0.85em;
+  text-align: left;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  background-color: var(--detailsBackground);
+  border-left: 3px solid var(--rebaneGreen);
+}
+
+.schematicNotice > div + div {
+  margin-top: 0.25em;
+}
+
+.schematicNotice_warning {
+  border-left-color: orange;
+}
+
+.schematicNotice_error {
+  border-left-color: #e05555;
+}

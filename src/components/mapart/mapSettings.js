@@ -6,6 +6,21 @@ import BufferedNumberInput from "./bufferedNumberInput/bufferedNumberInput";
 
 import Tooltip from "../tooltip";
 
+import {
+  LATE_SHADING_MODES,
+  PNG_TO_NBT_SITE_URL,
+  SCHEMATIC_DEFAULTS,
+  SHADING_METHOD_GROUPS,
+  SUPPORT_MODES,
+  SUPPRESSION_DIRECTIONS,
+  findShadingMethod,
+  isStepsMethod,
+  isSuppressMethod,
+  legacyShadingMethod,
+  legacySupportMode,
+  usesPngToNbt,
+} from "./pngToNbt";
+
 import BackgroundColourModes from "./json/backgroundColourModes.json";
 import CropModes from "./json/cropModes.json";
 import DownscaleMethods from "./json/downscaleMethods.json";
@@ -14,7 +29,6 @@ import DitherMethods from "./json/ditherMethods.json";
 import MapModes from "./json/mapModes.json";
 import SettingDefaults from "./json/settingDefaults.json";
 import SupportedVersions from "./json/supportedVersions.json";
-import WhereSupportBlocksModes from "./json/whereSupportBlocksModes.json";
 
 import "./mapSettings.css";
 
@@ -46,12 +60,25 @@ class MapSettings extends Component {
       optionValue_gammaCorrectAveraging,
       onOptionChange_gammaCorrectAveraging,
       optionValue_staircasing,
-      onOptionChange_staircasing,
       onOptionChange_staircasingCheckbox,
-      optionValue_whereSupportBlocks,
-      onOptionChange_WhereSupportBlocks,
+      optionValue_schematic_shadingMethod,
+      onOptionChange_schematic_shadingMethod,
+      optionValue_schematic_lateShading,
+      onOptionChange_schematic_lateShading,
+      optionValue_schematic_support,
+      onOptionChange_schematic_support,
       optionValue_supportBlock,
       setOption_SupportBlock,
+      optionValue_schematic_shadeBlock,
+      setOption_schematic_shadeBlock,
+      optionValue_schematic_suppressDirection,
+      onOptionChange_schematic_suppressDirection,
+      optionValue_schematic_suppressOneDirection,
+      onOptionChange_schematic_suppressOneDirection,
+      optionValue_schematic_keepReusableBlocks,
+      onOptionChange_schematic_keepReusableBlocks,
+      optionValue_schematic_blockRecycling,
+      onOptionChange_schematic_blockRecycling,
       optionValue_transparency,
       onOptionChange_transparency,
       optionValue_transparencyTolerance,
@@ -106,8 +133,6 @@ class MapSettings extends Component {
       preProcessingValue_backgroundColour,
       onOptionChange_PreProcessingBackgroundColour,
       onOptionChange_PreProcessingResetAll,
-      optionValue_extras_moreStaircasingOptions,
-      onOptionChange_extras_moreStaircasingOptions,
     } = this.props;
     const setting_mode = (
       <tr>
@@ -348,6 +373,9 @@ class MapSettings extends Component {
         </td>
       </tr>
     );
+    const staircasingOn =
+      optionValue_staircasing !==
+      (optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId ? MapModes.SCHEMATIC_NBT.staircaseModes.OFF.uniqueId : MapModes.MAPDAT.staircaseModes.OFF.uniqueId);
     const setting_staircasing = (
       <React.Fragment>
         <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/3D/TITLE-TT")}>
@@ -356,67 +384,175 @@ class MapSettings extends Component {
             {":"}
           </b>
         </Tooltip>{" "}
-        {optionValue_extras_moreStaircasingOptions ? (
-          <select onChange={onOptionChange_staircasing} value={optionValue_staircasing}>
-            {Object.values(
-              optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId ? MapModes.SCHEMATIC_NBT.staircaseModes : MapModes.MAPDAT.staircaseModes
-            ).map((staircaseMode) => (
-              <option key={staircaseMode.uniqueId} value={staircaseMode.uniqueId}>
-                {getLocaleString(staircaseMode.localeKey)}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <input
-            type="checkbox"
-            checked={
-              optionValue_staircasing !==
-              (optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId ? MapModes.SCHEMATIC_NBT.staircaseModes.OFF.uniqueId : MapModes.MAPDAT.staircaseModes.OFF.uniqueId)
-            }
-            onChange={onOptionChange_staircasingCheckbox}
-          />
-        )}
+        <input type="checkbox" checked={staircasingOn} onChange={onOptionChange_staircasingCheckbox} />
         <br />
       </React.Fragment>
     );
     const isNBT = optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId;
-    const setting_whereSupportBlocks = isNBT ? (
-      <tr>
-        <th>
-          <b>
-            {getLocaleString("MAP-SETTINGS/NBT-SPECIFIC/WHERE-SUPPORT-BLOCKS/TITLE")}
-            {":"}
-          </b>{" "}
-        </th>
-        <td>
-          <select value={optionValue_whereSupportBlocks} onChange={onOptionChange_WhereSupportBlocks}>
-            {Object.values(WhereSupportBlocksModes).map((whereSupportBlocksMode) => (
-              <option key={whereSupportBlocksMode.uniqueId} value={whereSupportBlocksMode.uniqueId}>
-                {getLocaleString(whereSupportBlocksMode.localeKey)}
-              </option>
-            ))}
-          </select>
-        </td>
-      </tr>
-    ) : null;
-    const setting_supportBlock = isNBT ? (
-      <tr>
-        <th>
-          <b>
-            {getLocaleString("MAP-SETTINGS/NBT-SPECIFIC/SUPPORT-BLOCK-TO-ADD")}
-            {":"}
-          </b>{" "}
-        </th>
-        <td>
-          <AutoCompleteInputBlockToAdd
-            coloursJSON={coloursJSON}
-            value={optionValue_supportBlock}
-            setValue={setOption_SupportBlock}
-            optionValue_version={optionValue_version}
-          />
-        </td>
-      </tr>
-    ) : null;
+    // Schematic options: what PNG-to-NBT builds the .nbt with. Anything the current settings cannot use is
+    // greyed out rather than hidden. Versions PNG-to-NBT does not cover keep the built-in generator, which
+    // only knows Classic / Valley, the support modes it had as "Add blocks under", and one support block
+    // that is also its noobline.
+    let settingGroup_schematic = null;
+    if (isNBT) {
+      const pngToNbt = usesPngToNbt(optionValue_version);
+      const shadingMethod = pngToNbt ? optionValue_schematic_shadingMethod : legacyShadingMethod(optionValue_schematic_shadingMethod);
+      const supportMode = pngToNbt ? optionValue_schematic_support : legacySupportMode(optionValue_schematic_support);
+      const suppressing = pngToNbt && staircasingOn && isSuppressMethod(shadingMethod);
+      const stepping = suppressing && isStepsMethod(shadingMethod);
+      const twoLayer = suppressing && shadingMethod === "suppress_2layer";
+      const supportModeEntry = SUPPORT_MODES.find((mode) => mode.value === supportMode);
+      const schematicRow = (disabled, label, tooltipText, control) => (
+        <tr className={disabled ? "settingDisabled" : null}>
+          <th>
+            <Tooltip tooltipText={tooltipText}>
+              <b>
+                {label}
+                {":"}
+              </b>
+            </Tooltip>{" "}
+          </th>
+          <td>{control}</td>
+        </tr>
+      );
+      const setting_schematic_shadingMethod = schematicRow(
+        !staircasingOn,
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/SHADING-METHOD/TITLE"),
+        `${getLocaleString("MAP-SETTINGS/SCHEMATIC/SHADING-METHOD/TITLE-TT")} ${getLocaleString(`${findShadingMethod(shadingMethod).localeKey}-TT`)}`,
+        <select value={shadingMethod} onChange={onOptionChange_schematic_shadingMethod} disabled={!staircasingOn}>
+          {SHADING_METHOD_GROUPS.map((group) => (
+            <optgroup key={group.localeKey} label={getLocaleString(group.localeKey)}>
+              {group.methods.map((method) => (
+                <option key={method.value} value={method.value} disabled={!pngToNbt && !method.legacy}>
+                  {getLocaleString(method.localeKey)}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      );
+      const setting_schematic_lateShading = schematicRow(
+        !twoLayer,
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/LATE-SHADING/TITLE"),
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/LATE-SHADING/TITLE-TT"),
+        <select value={optionValue_schematic_lateShading} onChange={onOptionChange_schematic_lateShading} disabled={!twoLayer}>
+          {LATE_SHADING_MODES.map((mode) => (
+            <option key={mode.value} value={mode.value}>
+              {getLocaleString(mode.localeKey)}
+            </option>
+          ))}
+        </select>
+      );
+      const setting_schematic_support = schematicRow(
+        false,
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/SUPPORT/TITLE"),
+        `${getLocaleString("MAP-SETTINGS/SCHEMATIC/SUPPORT/TITLE-TT")} ${getLocaleString(`${supportModeEntry.localeKey}-TT`)}`,
+        <select value={supportMode} onChange={onOptionChange_schematic_support}>
+          {SUPPORT_MODES.map((mode) => (
+            <option key={mode.value} value={mode.value} disabled={!pngToNbt && mode.legacy === null}>
+              {getLocaleString(mode.localeKey)}
+            </option>
+          ))}
+        </select>
+      );
+      // the built-in generator also uses the support block for its noobline, so it always needs one
+      const supportBlockDisabled = pngToNbt && supportMode === "none";
+      const setting_schematic_supportBlock = schematicRow(
+        supportBlockDisabled,
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/SUPPORT-BLOCK"),
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/SUPPORT-BLOCK-TT"),
+        <AutoCompleteInputBlockToAdd
+          coloursJSON={coloursJSON}
+          value={optionValue_supportBlock}
+          setValue={setOption_SupportBlock}
+          optionValue_version={optionValue_version}
+          placeholder={SCHEMATIC_DEFAULTS.supportBlock}
+          disabled={supportBlockDisabled}
+        />
+      );
+      // the same PNG-to-NBT option: the noobline's blocks, plus the temporary shading blocks of suppress builds
+      const setting_schematic_shadeBlock = schematicRow(
+        !pngToNbt,
+        getLocaleString(suppressing ? "MAP-SETTINGS/SCHEMATIC/SHADE-BLOCK" : "MAP-SETTINGS/SCHEMATIC/NOOBLINE-BLOCK"),
+        getLocaleString(suppressing ? "MAP-SETTINGS/SCHEMATIC/SHADE-BLOCK-TT" : "MAP-SETTINGS/SCHEMATIC/NOOBLINE-BLOCK-TT"),
+        <AutoCompleteInputBlockToAdd
+          coloursJSON={coloursJSON}
+          value={optionValue_schematic_shadeBlock}
+          setValue={setOption_schematic_shadeBlock}
+          optionValue_version={optionValue_version}
+          placeholder={SCHEMATIC_DEFAULTS.shadeBlock}
+          disabled={!pngToNbt}
+        />
+      );
+      const setting_schematic_suppressDirection = schematicRow(
+        !suppressing,
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/SUPPRESSION-DIRECTION/TITLE"),
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/SUPPRESSION-DIRECTION/TITLE-TT"),
+        <select value={optionValue_schematic_suppressDirection} onChange={onOptionChange_schematic_suppressDirection} disabled={!suppressing}>
+          {SUPPRESSION_DIRECTIONS.map((direction) => (
+            <option key={direction.value} value={direction.value}>
+              {getLocaleString(direction.localeKey)}
+            </option>
+          ))}
+        </select>
+      );
+      const setting_schematic_suppressOneDirection = schematicRow(
+        !suppressing,
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/SUPPRESS-ONE-DIRECTION"),
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/SUPPRESS-ONE-DIRECTION-TT"),
+        <input
+          type="checkbox"
+          checked={optionValue_schematic_suppressOneDirection}
+          onChange={onOptionChange_schematic_suppressOneDirection}
+          disabled={!suppressing}
+        />
+      );
+      const setting_schematic_keepReusableBlocks = schematicRow(
+        !stepping,
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/KEEP-REUSABLE-BLOCKS"),
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/KEEP-REUSABLE-BLOCKS-TT"),
+        <input
+          type="checkbox"
+          checked={optionValue_schematic_keepReusableBlocks}
+          onChange={onOptionChange_schematic_keepReusableBlocks}
+          disabled={!stepping}
+        />
+      );
+      const setting_schematic_blockRecycling = schematicRow(
+        !stepping,
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/BLOCK-RECYCLING"),
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/BLOCK-RECYCLING-TT"),
+        <input type="checkbox" checked={optionValue_schematic_blockRecycling} onChange={onOptionChange_schematic_blockRecycling} disabled={!stepping} />
+      );
+      settingGroup_schematic = (
+        <details className="schematicOptions">
+          <summary>{getLocaleString("MAP-SETTINGS/SCHEMATIC/TITLE")}</summary>
+          <div className="settingsDetailsBody">
+            {!pngToNbt && <small className="schematicNote">{getLocaleString("MAP-SETTINGS/SCHEMATIC/LEGACY-NOTE")}</small>}
+            <table>
+              <tbody>
+                {setting_schematic_shadingMethod}
+                {setting_schematic_lateShading}
+                {setting_schematic_support}
+                {setting_schematic_supportBlock}
+                {setting_schematic_shadeBlock}
+                {setting_schematic_suppressDirection}
+                {setting_schematic_suppressOneDirection}
+                {setting_schematic_keepReusableBlocks}
+                {setting_schematic_blockRecycling}
+              </tbody>
+            </table>
+            <small className="schematicNote">
+              {getLocaleString("MAP-SETTINGS/SCHEMATIC/CREDIT-1")}
+              <a href={PNG_TO_NBT_SITE_URL} target="_blank" rel="noopener noreferrer">
+                {getLocaleString("MAP-SETTINGS/SCHEMATIC/CREDIT-LINK")}
+              </a>
+              {getLocaleString("MAP-SETTINGS/SCHEMATIC/CREDIT-2")}
+            </small>
+          </div>
+        </details>
+      );
+    }
     let settings_mapModeConditional = null;
     let settings_mapdatFilenameRows = null; // map.dat only; rendered in Advanced options under Mode
     if (!isNBT) {
@@ -1323,21 +1459,6 @@ class MapSettings extends Component {
         </details>
       </React.Fragment>
     );
-    const setting_extras_moreStaircasingOptions = (
-      <tr>
-        <th>
-          <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/EXTRAS/MORE-STAIRCASING-OPTIONS-TT")}>
-            <b>
-              {getLocaleString("MAP-SETTINGS/EXTRAS/MORE-STAIRCASING-OPTIONS")}
-              {":"}
-            </b>
-          </Tooltip>{" "}
-        </th>
-        <td>
-          <input type="checkbox" checked={optionValue_extras_moreStaircasingOptions} onChange={onOptionChange_extras_moreStaircasingOptions} />
-        </td>
-      </tr>
-    );
     const settingGroup_extras = (
       <React.Fragment>
         <details>
@@ -1347,13 +1468,10 @@ class MapSettings extends Component {
             <tbody>
               {setting_version}
               {setting_grid}
-              {setting_whereSupportBlocks}
-              {setting_supportBlock}
               {setting_mode}
               {settings_mapdatFilenameRows}
               {setting_downscaleMethod}
               {setting_dithering_advancedStrength}
-              {setting_extras_moreStaircasingOptions}
               {setting_moreColourspaceOptions}
               {setting_gammaCorrectAveraging}
               {setting_dithering_boustrophedon}
@@ -1375,6 +1493,7 @@ class MapSettings extends Component {
         {setting_dithering_propagation}
         {settingGroup_preprocessing}
         {settingGroup_extras}
+        {settingGroup_schematic}
       </div>
     );
     return settingsDiv;

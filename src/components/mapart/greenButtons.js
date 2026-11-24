@@ -6,6 +6,24 @@ import Tooltip from "../tooltip";
 
 import MapModes from "./json/mapModes.json";
 import WhereSupportBlocksModes from "./json/whereSupportBlocksModes.json";
+import {
+  LATE_SHADING_MODES,
+  SCHEMATIC_DEFAULTS,
+  SUPPRESSION_DIRECTIONS,
+  connectPngToNbt,
+  exactColourLookup,
+  forgetBrokenPngToNbtConnection,
+  generateMapTile,
+  isPngToNbtConnectionFailure,
+  legacyShadingMethod,
+  legacyWhereSupportBlocksKey,
+  mapTileColours,
+  pngToNbtBlocks,
+  pngToNbtOptions,
+  pngToNbtVersionKey,
+  rejectedBlockColourId,
+  withNamedPaletteEntries,
+} from "./pngToNbt";
 
 import WorkerBuilder from './workers/worker-builder';
 import NBTWorker from "./workers/nbt";
@@ -19,9 +37,12 @@ class GreenButtons extends Component {
     buttonWidth_NBT_Split: 1,
     buttonWidth_Mapdat_Split: 1,
     mapPreviewWorker_onFinishCallback: null,
+    schematicNotice: null, // { tone: "info" | "warning" | "error", title?, lines } shown under the buttons
   };
 
   nbtWorker = new WorkerBuilder(NBTWorker);
+
+  pngToNbtRun = 0; // bumped to abandon a PNG-to-NBT download in progress
 
   resetButtonWidths() {
     this.setState({
@@ -43,6 +64,16 @@ class GreenButtons extends Component {
     return optionValue_mapdatModernNaming ? `${id}.dat` : `map_${id}.dat`;
   }
 
+  // The built-in generator's staircase mode: off, or Classic / Valley, the only two it knows.
+  legacyNBTStaircasing() {
+    const { optionValue_staircasing, optionValue_schematic_shadingMethod } = this.props;
+    const staircaseModes = MapModes.SCHEMATIC_NBT.staircaseModes;
+    if (optionValue_staircasing === staircaseModes.OFF.uniqueId) {
+      return staircaseModes.OFF.uniqueId;
+    }
+    return legacyShadingMethod(optionValue_schematic_shadingMethod) === "staircase_valley" ? staircaseModes.VALLEY.uniqueId : staircaseModes.CLASSIC.uniqueId;
+  }
+
   getNBT_base = (workerHeader) => {
     const {
       getLocaleString,
@@ -51,7 +82,7 @@ class GreenButtons extends Component {
       optionValue_mapSize_x,
       optionValue_mapSize_y,
       optionValue_staircasing,
-      optionValue_whereSupportBlocks,
+      optionValue_schematic_support,
       optionValue_supportBlock,
       uploadedImage_baseFilename,
       currentMaterialsData,
@@ -66,6 +97,13 @@ class GreenButtons extends Component {
       alert(getLocaleString("DOWNLOAD/ERROR-NONE-SELECTED"));
       return;
     }
+    const makingNBT = workerHeader === "CREATE_NBT_JOINED" || workerHeader === "CREATE_NBT_SPLIT";
+    if (makingNBT && pngToNbtVersionKey(optionValue_version.MCVersion) !== null) {
+      this.getNBT_pngToNbt(workerHeader === "CREATE_NBT_SPLIT");
+      return;
+    }
+    this.pngToNbtRun += 1;
+    this.setState({ schematicNotice: null });
     this.nbtWorker.terminate();
     this.resetButtonWidths();
     let numberOfSplitsCalculated = 0;
@@ -144,15 +182,168 @@ class GreenButtons extends Component {
         MapModes: MapModes,
         WhereSupportBlocksModes: WhereSupportBlocksModes,
         optionValue_version: optionValue_version,
-        optionValue_staircasing: optionValue_staircasing,
-        optionValue_whereSupportBlocks: optionValue_whereSupportBlocks,
-        optionValue_supportBlock: optionValue_supportBlock,
+        optionValue_staircasing: makingNBT ? this.legacyNBTStaircasing() : optionValue_staircasing,
+        optionValue_whereSupportBlocks: WhereSupportBlocksModes[legacyWhereSupportBlocksKey(optionValue_schematic_support)].uniqueId,
+        // an empty field means the default it shows as its placeholder
+        optionValue_supportBlock: optionValue_supportBlock.trim() === "" ? SCHEMATIC_DEFAULTS.supportBlock : optionValue_supportBlock,
         pixelsData: currentMaterialsData.pixelsData,
         maps: currentMaterialsData.maps,
         currentSelectedBlocks: currentMaterialsData.currentSelectedBlocks,
       },
     });
   };
+
+  // Schematics from PNG-to-NBT, one map at a time. "Download NBT" saves each map's .nbt (a single file for a
+  // 1x1 map), the split button zips them, just as the map.dat buttons do: PNG-to-NBT builds every map on its
+  // own, so there is no joined schematic. Its notes for the build (supports it could not add, building at
+  // the world's minimum Y, and so on) are listed under the buttons afterwards.
+  getNBT_pngToNbt = async (zipped) => {
+    const {
+      getLocaleString,
+      coloursJSON,
+      optionValue_version,
+      optionValue_mapSize_x,
+      optionValue_mapSize_y,
+      optionValue_staircasing,
+      optionValue_schematic_shadingMethod,
+      optionValue_schematic_lateShading,
+      optionValue_schematic_support,
+      optionValue_supportBlock,
+      optionValue_schematic_shadeBlock,
+      optionValue_schematic_suppressDirection,
+      optionValue_schematic_suppressOneDirection,
+      optionValue_schematic_keepReusableBlocks,
+      optionValue_schematic_blockRecycling,
+      uploadedImage_baseFilename,
+      currentMaterialsData,
+      downloadBlobFile,
+    } = this.props;
+    // what the preview made; the props may move on while the maps are being built
+    const { pixelsData, currentSelectedBlocks } = currentMaterialsData;
+    if (pixelsData === null) {
+      return;
+    }
+    this.nbtWorker.terminate();
+    this.resetButtonWidths();
+    this.pngToNbtRun += 1;
+    const run = this.pngToNbtRun;
+    const progressKey = zipped ? "buttonWidth_NBT_Split" : "buttonWidth_NBT_Joined";
+    const mapCount = optionValue_mapSize_x * optionValue_mapSize_y;
+    const options = pngToNbtOptions({
+      versionKey: pngToNbtVersionKey(optionValue_version.MCVersion),
+      staircasing: optionValue_staircasing !== MapModes.SCHEMATIC_NBT.staircaseModes.OFF.uniqueId,
+      shadingMethod: optionValue_schematic_shadingMethod,
+      support: optionValue_schematic_support,
+      supportBlock: optionValue_supportBlock,
+      shadeBlock: optionValue_schematic_shadeBlock,
+      suppressDirection: optionValue_schematic_suppressDirection,
+      suppressOneDirection: optionValue_schematic_suppressOneDirection,
+      keepReusableBlocks: optionValue_schematic_keepReusableBlocks,
+      blockRecycling: optionValue_schematic_blockRecycling,
+    });
+    const lookup = exactColourLookup(coloursJSON);
+    const files = [];
+    const notes = new Map(); // note -> the maps it applies to
+    const addNote = (note, mapLabel) => {
+      if (!notes.has(note)) {
+        notes.set(note, []);
+      }
+      notes.get(note).push(mapLabel);
+    };
+    let mapLabel = null;
+    this.setState({ [progressKey]: 0, schematicNotice: { tone: "info", lines: [getLocaleString("DOWNLOAD/PNG-TO-NBT/CONNECTING")] } });
+    try {
+      const connection = await connectPngToNbt();
+      for (let whichMap_y = 0; whichMap_y < optionValue_mapSize_y; whichMap_y++) {
+        for (let whichMap_x = 0; whichMap_x < optionValue_mapSize_x; whichMap_x++) {
+          if (run !== this.pngToNbtRun) {
+            return;
+          }
+          const mapIndex = whichMap_y * optionValue_mapSize_x + whichMap_x;
+          const thisMap = getLocaleString("DOWNLOAD/PNG-TO-NBT/MAP").replace("{x}", whichMap_x).replace("{y}", whichMap_y);
+          mapLabel = thisMap;
+          if (mapCount > 1) {
+            const building = getLocaleString("DOWNLOAD/PNG-TO-NBT/BUILDING").replace("{n}", mapIndex + 1).replace("{total}", mapCount);
+            this.setState({ schematicNotice: { tone: "info", lines: [building] } });
+          }
+          const { colors, used } = mapTileColours(pixelsData, optionValue_mapSize_x, whichMap_x, whichMap_y, lookup);
+          const blocks = pngToNbtBlocks(used, coloursJSON, currentSelectedBlocks, optionValue_version.MCVersion);
+          const result = await generateMapTile(connection, { colors, blocks, options }, optionValue_schematic_lateShading, (kind, value) =>
+            addNote(this.pngToNbtAdjustmentNote(kind, value, options), thisMap)
+          );
+          if (run !== this.pngToNbtRun) {
+            return;
+          }
+          const stem = mapCount > 1 || zipped ? `${uploadedImage_baseFilename}_${whichMap_x}_${whichMap_y}` : uploadedImage_baseFilename;
+          for (const file of result.files) {
+            // one file per map in practice; any extras keep PNG-to-NBT's suffix ("tile-2.nbt" -> "stem-2.nbt")
+            files.push({ name: result.files.length === 1 ? `${stem}.nbt` : `${stem}${file.name.replace(/^tile/, "")}`, data: withNamedPaletteEntries(file.data) });
+          }
+          for (const warning of result.warnings) {
+            addNote(warning.message, thisMap);
+          }
+          this.setState({ [progressKey]: (mapIndex + 1) / mapCount });
+        }
+      }
+      if (zipped) {
+        const zipFile = new JSZip();
+        for (const file of files) {
+          zipFile.file(file.name, file.data);
+        }
+        const content = await zipFile.generateAsync({ type: "blob" });
+        if (run !== this.pngToNbtRun) {
+          return;
+        }
+        downloadBlobFile(content, `${uploadedImage_baseFilename}.zip`);
+      } else {
+        for (const file of files) {
+          downloadBlobFile(new Blob([file.data], { type: "application/x-minecraft-level" }), file.name);
+        }
+      }
+    } catch (error) {
+      if (run !== this.pngToNbtRun) {
+        return;
+      }
+      console.error(error);
+      forgetBrokenPngToNbtConnection(error);
+      this.resetButtonWidths();
+      this.setState({ schematicNotice: { tone: "error", lines: this.pngToNbtErrorLines(error, mapCount > 1 ? mapLabel : null, currentSelectedBlocks) } });
+      return;
+    }
+    // a note that holds for every map is listed once, without map names
+    const lines = [...notes].map(([note, maps]) => (maps.length === mapCount ? note : `${maps.join(" · ")}: ${note}`));
+    this.setState({ schematicNotice: lines.length === 0 ? null : { tone: "warning", title: getLocaleString("DOWNLOAD/PNG-TO-NBT/NOTES"), lines } });
+  };
+
+  pngToNbtAdjustmentNote(kind, value, options) {
+    const { getLocaleString } = this.props;
+    if (kind === "lateShading") {
+      const mode = LATE_SHADING_MODES.find((entry) => entry.value === value);
+      return getLocaleString("DOWNLOAD/PNG-TO-NBT/LATE-SHADING-USED").replace("{method}", getLocaleString(mode.localeKey));
+    }
+    const directionName = (direction) => getLocaleString(SUPPRESSION_DIRECTIONS.find((entry) => entry.value === direction).localeKey);
+    return getLocaleString("DOWNLOAD/PNG-TO-NBT/DIRECTION-CHANGED").replace("{from}", directionName(options.direction)).replace("{to}", directionName(value));
+  }
+
+  pngToNbtErrorLines(error, mapLabel, selectedBlocks) {
+    const { getLocaleString, coloursJSON, optionValue_version } = this.props;
+    const detail = error !== null && typeof error === "object" && typeof error.message === "string" ? error.message : String(error);
+    if (isPngToNbtConnectionFailure(error)) {
+      return [getLocaleString("DOWNLOAD/PNG-TO-NBT/CONNECT-FAILED"), `(${detail})`];
+    }
+    const colourId = rejectedBlockColourId(error);
+    const colourSetEntry = colourId === null ? undefined : Object.entries(coloursJSON).find(([, colourSet]) => colourSet.mapdatId === colourId);
+    if (colourSetEntry !== undefined && colourSetEntry[1].blocks[selectedBlocks[colourSetEntry[0]]] !== undefined) {
+      const [colourSetId, colourSet] = colourSetEntry;
+      return [
+        getLocaleString("DOWNLOAD/PNG-TO-NBT/BLOCK-REJECTED")
+          .replace("{block}", colourSet.blocks[selectedBlocks[colourSetId]].displayName)
+          .replace("{colour}", colourSet.colourName)
+          .replace("{version}", optionValue_version.MCVersion),
+      ];
+    }
+    return [getLocaleString("DOWNLOAD/PNG-TO-NBT/FAILED"), mapLabel === null ? detail : `${mapLabel}: ${detail}`];
+  }
 
   onGetNBTClicked = () => {
     this.getNBT_base("CREATE_NBT_JOINED");
@@ -184,8 +375,15 @@ class GreenButtons extends Component {
       optionValue_downscaleMethod,
       optionValue_gammaCorrectAveraging,
       optionValue_staircasing,
-      optionValue_whereSupportBlocks,
+      optionValue_schematic_shadingMethod,
+      optionValue_schematic_lateShading,
+      optionValue_schematic_support,
       optionValue_supportBlock,
+      optionValue_schematic_shadeBlock,
+      optionValue_schematic_suppressDirection,
+      optionValue_schematic_suppressOneDirection,
+      optionValue_schematic_keepReusableBlocks,
+      optionValue_schematic_blockRecycling,
       optionValue_transparency,
       optionValue_transparencyTolerance,
       optionValue_mapdatFilenameUseId,
@@ -224,8 +422,15 @@ class GreenButtons extends Component {
       prevProps.optionValue_downscaleMethod !== optionValue_downscaleMethod,
       prevProps.optionValue_gammaCorrectAveraging !== optionValue_gammaCorrectAveraging,
       prevProps.optionValue_staircasing !== optionValue_staircasing,
-      prevProps.optionValue_whereSupportBlocks !== optionValue_whereSupportBlocks,
+      prevProps.optionValue_schematic_shadingMethod !== optionValue_schematic_shadingMethod,
+      prevProps.optionValue_schematic_lateShading !== optionValue_schematic_lateShading,
+      prevProps.optionValue_schematic_support !== optionValue_schematic_support,
       prevProps.optionValue_supportBlock !== optionValue_supportBlock,
+      prevProps.optionValue_schematic_shadeBlock !== optionValue_schematic_shadeBlock,
+      prevProps.optionValue_schematic_suppressDirection !== optionValue_schematic_suppressDirection,
+      prevProps.optionValue_schematic_suppressOneDirection !== optionValue_schematic_suppressOneDirection,
+      prevProps.optionValue_schematic_keepReusableBlocks !== optionValue_schematic_keepReusableBlocks,
+      prevProps.optionValue_schematic_blockRecycling !== optionValue_schematic_blockRecycling,
       prevProps.optionValue_transparency !== optionValue_transparency,
       prevProps.optionValue_transparencyTolerance !== optionValue_transparencyTolerance,
       prevProps.optionValue_mapdatFilenameUseId !== optionValue_mapdatFilenameUseId,
@@ -256,10 +461,11 @@ class GreenButtons extends Component {
   componentDidUpdate(prevProps) {
     const { mapPreviewWorker_inProgress } = this.props;
     if (this.componentDidUpdate_shouldNBTWorkerTerminate(prevProps)) {
-      // reset callback if setting changed
+      // reset callback if setting changed; notes about the last schematic no longer apply either
       this.nbtWorker.terminate();
+      this.pngToNbtRun += 1;
       this.resetButtonWidths();
-      this.setState({ mapPreviewWorker_onFinishCallback: null });
+      this.setState({ mapPreviewWorker_onFinishCallback: null, schematicNotice: null });
     } else if (!mapPreviewWorker_inProgress && this.state.mapPreviewWorker_onFinishCallback !== null) {
       this.state.mapPreviewWorker_onFinishCallback();
       this.setState({ mapPreviewWorker_onFinishCallback: null });
@@ -268,17 +474,19 @@ class GreenButtons extends Component {
 
   componentWillUnmount() {
     this.nbtWorker.terminate();
+    this.pngToNbtRun += 1;
   }
 
   render() {
-    const { buttonWidth_NBT_Joined, buttonWidth_NBT_Split, buttonWidth_Mapdat_Split } = this.state;
-    const { getLocaleString, optionValue_modeNBTOrMapdat } = this.props;
+    const { buttonWidth_NBT_Joined, buttonWidth_NBT_Split, buttonWidth_Mapdat_Split, schematicNotice } = this.state;
+    const { getLocaleString, optionValue_modeNBTOrMapdat, optionValue_version, optionValue_mapSize_x, optionValue_mapSize_y } = this.props;
+    const nbtPerMap = pngToNbtVersionKey(optionValue_version.MCVersion) !== null && optionValue_mapSize_x * optionValue_mapSize_y > 1;
     let buttons_mapModeConditional;
     // dummy text used in divs with absolutely positioned children to create correct container height
     if (optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId) {
       buttons_mapModeConditional = (
         <React.Fragment>
-          <Tooltip tooltipText={getLocaleString("DOWNLOAD/NBT-SPECIFIC/DOWNLOAD-TT")}>
+          <Tooltip tooltipText={getLocaleString(nbtPerMap ? "DOWNLOAD/PNG-TO-NBT/DOWNLOAD-PER-MAP-TT" : "DOWNLOAD/NBT-SPECIFIC/DOWNLOAD-TT")}>
             <div className="greenButton" onClick={this.onGetNBTClicked}>
               <span className="greenButton_large_text_dummy">{getLocaleString("DOWNLOAD/NBT-SPECIFIC/DOWNLOAD")}</span>
               <span className="greenButton_large_text">{getLocaleString("DOWNLOAD/NBT-SPECIFIC/DOWNLOAD")}</span>
@@ -341,6 +549,14 @@ class GreenButtons extends Component {
     const buttonsDiv = (
       <div>
         {buttons_mapModeConditional}
+        {schematicNotice !== null && (
+          <div className={`schematicNotice schematicNotice_${schematicNotice.tone}`}>
+            {schematicNotice.title !== undefined && <b>{schematicNotice.title}</b>}
+            {schematicNotice.lines.map((line, index) => (
+              <div key={index}>{line}</div>
+            ))}
+          </div>
+        )}
       </div>
     );
     return buttonsDiv;

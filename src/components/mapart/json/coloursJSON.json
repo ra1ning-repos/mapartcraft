@@ -9695,8 +9695,7 @@
                     "1.21.4": {
                         "NBTName": "closed_eyeblossom",
                         "NBTArgs": {}
-                    },
-                    "1.21.5": "&1.21.4"
+                    }
                 },
                 "supportBlockMandatory": true,
                 "flammable": true,

@@ -7,6 +7,7 @@ import MapPreview from "./mapPreview";
 import ImageEditor from "./imageEditor";
 import MapSettings from "./mapSettings";
 import Materials from "./materials";
+import { SCHEMATIC_DEFAULTS, legacyWhereSupportBlocksKey } from "./pngToNbt";
 import coloursJSON from "./json/coloursJSON.json";
 
 import BackgroundColourModes from "./json/backgroundColourModes.json";
@@ -29,7 +30,6 @@ import "./mapartController.css";
 const UI_TOGGLES_STORAGE_KEY = "mapartcraft_uiToggles";
 const UI_TOGGLE_KEYS = [
   "optionValue_moreDitheringOptions",
-  "optionValue_extras_moreStaircasingOptions",
   "optionValue_moreColourspaceOptions",
   "optionValue_dithering_advancedStrength",
 ];
@@ -51,8 +51,16 @@ class MapartController extends Component {
     optionValue_downscaleMethod: DownscaleMethods.AREA_AVERAGE.uniqueId,
     optionValue_gammaCorrectAveraging: true,
     optionValue_staircasing: MapModes.SCHEMATIC_NBT.staircaseModes.CLASSIC.uniqueId,
-    optionValue_whereSupportBlocks: WhereSupportBlocksModes.ALL_OPTIMIZED.uniqueId,
-    optionValue_supportBlock: "cobblestone",
+    // Schematic options (see pngToNbt.js); values are PNG-to-NBT's own option values
+    optionValue_schematic_shadingMethod: SCHEMATIC_DEFAULTS.shadingMethod,
+    optionValue_schematic_lateShading: SCHEMATIC_DEFAULTS.lateShading,
+    optionValue_schematic_support: SCHEMATIC_DEFAULTS.support,
+    optionValue_supportBlock: SCHEMATIC_DEFAULTS.supportBlock,
+    optionValue_schematic_shadeBlock: SCHEMATIC_DEFAULTS.shadeBlock,
+    optionValue_schematic_suppressDirection: SCHEMATIC_DEFAULTS.suppressDirection,
+    optionValue_schematic_suppressOneDirection: SCHEMATIC_DEFAULTS.suppressOneDirection,
+    optionValue_schematic_keepReusableBlocks: SCHEMATIC_DEFAULTS.keepReusableBlocks,
+    optionValue_schematic_blockRecycling: SCHEMATIC_DEFAULTS.blockRecycling,
     optionValue_transparency: false,
     optionValue_transparencyTolerance: 128,
     optionValue_mapdatFilenameUseId: true,
@@ -79,7 +87,6 @@ class MapartController extends Component {
     preProcessingValue_warmth: SettingDefaults.preProcessingValue_warmth,
     preProcessingValue_backgroundColourSelect: BackgroundColourModes.OFF.uniqueId,
     preProcessingValue_backgroundColour: SettingDefaults.preProcessingValue_backgroundColour,
-    optionValue_extras_moreStaircasingOptions: false,
     uploadedImage: null,
     uploadedImage_baseFilename: null,
     presets: [],
@@ -410,11 +417,6 @@ class MapartController extends Component {
     // "updatePreviewScale(0)"
   };
 
-  onOptionChange_staircasing = (e) => {
-    const staircasingValue = parseInt(e.target.value);
-    this.setState({ optionValue_staircasing: staircasingValue });
-  };
-
   onOptionChange_transparency = () => {
     this.setState({
       optionValue_transparency: !this.state.optionValue_transparency,
@@ -500,14 +502,47 @@ class MapartController extends Component {
     this.setState({ optionValue_dithering_boustrophedon: !optionValue_dithering_boustrophedon });
   };
 
-  onOptionChange_WhereSupportBlocks = (e) => {
-    const newValue = parseInt(e.target.value);
-    this.setState({ optionValue_whereSupportBlocks: newValue });
+  onOptionChange_schematic_shadingMethod = (e) => {
+    this.setState({ optionValue_schematic_shadingMethod: e.target.value });
+  };
+
+  onOptionChange_schematic_lateShading = (e) => {
+    this.setState({ optionValue_schematic_lateShading: e.target.value });
+  };
+
+  onOptionChange_schematic_support = (e) => {
+    this.setState({ optionValue_schematic_support: e.target.value });
   };
 
   setOption_SupportBlock = (text) => {
     this.setState({ optionValue_supportBlock: text });
   };
+
+  setOption_schematic_shadeBlock = (text) => {
+    this.setState({ optionValue_schematic_shadeBlock: text });
+  };
+
+  onOptionChange_schematic_suppressDirection = (e) => {
+    this.setState({ optionValue_schematic_suppressDirection: e.target.value });
+  };
+
+  onOptionChange_schematic_suppressOneDirection = () => {
+    this.setState((currentState) => ({ optionValue_schematic_suppressOneDirection: !currentState.optionValue_schematic_suppressOneDirection }));
+  };
+
+  onOptionChange_schematic_keepReusableBlocks = () => {
+    this.setState((currentState) => ({ optionValue_schematic_keepReusableBlocks: !currentState.optionValue_schematic_keepReusableBlocks }));
+  };
+
+  onOptionChange_schematic_blockRecycling = () => {
+    this.setState((currentState) => ({ optionValue_schematic_blockRecycling: !currentState.optionValue_schematic_blockRecycling }));
+  };
+
+  // The map preview's support-block count still uses the old "Add blocks under" rules; this is the nearest
+  // of those to the chosen support mode.
+  estimatedWhereSupportBlocks() {
+    return WhereSupportBlocksModes[legacyWhereSupportBlocksKey(this.state.optionValue_schematic_support)].uniqueId;
+  }
 
   onOptionChange_PreProcessingBrightness = (value) => {
     this.setState({
@@ -627,7 +662,8 @@ class MapartController extends Component {
     }
   }
 
-  // The staircasing checkbox: "off" is OFF, "on" is Classic (NBT) or On (map.dat).
+  // The staircasing checkbox: "off" is OFF, "on" is Classic (NBT) or On (map.dat). For schematics "on" only
+  // picks the three-tone palette; how the shading is built is the Shading method in Schematic options.
   simpleStaircaseModes() {
     if (this.state.optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId) {
       return { off: MapModes.SCHEMATIC_NBT.staircaseModes.OFF, on: MapModes.SCHEMATIC_NBT.staircaseModes.CLASSIC };
@@ -638,20 +674,6 @@ class MapartController extends Component {
   onOptionChange_staircasingCheckbox = () => {
     const { off, on } = this.simpleStaircaseModes();
     this.setState({ optionValue_staircasing: this.state.optionValue_staircasing === off.uniqueId ? on.uniqueId : off.uniqueId });
-  };
-
-  onOptionChange_extras_moreStaircasingOptions = () => {
-    const next = !this.state.optionValue_extras_moreStaircasingOptions;
-    const update = { optionValue_extras_moreStaircasingOptions: next };
-    if (!next) {
-      // back to the checkbox: anything other than "off" collapses onto the checkbox's "on" mode
-      const { off, on } = this.simpleStaircaseModes();
-      if (this.state.optionValue_staircasing !== off.uniqueId) {
-        update.optionValue_staircasing = on.uniqueId;
-      }
-    }
-    this.setState(update);
-    this.saveUiToggles(update);
   };
 
   onOptionChange_moreDitheringOptions = () => {
@@ -1032,8 +1054,15 @@ class MapartController extends Component {
       optionValue_downscaleMethod,
       optionValue_gammaCorrectAveraging,
       optionValue_staircasing,
-      optionValue_whereSupportBlocks,
+      optionValue_schematic_shadingMethod,
+      optionValue_schematic_lateShading,
+      optionValue_schematic_support,
       optionValue_supportBlock,
+      optionValue_schematic_shadeBlock,
+      optionValue_schematic_suppressDirection,
+      optionValue_schematic_suppressOneDirection,
+      optionValue_schematic_keepReusableBlocks,
+      optionValue_schematic_blockRecycling,
       optionValue_transparency,
       optionValue_transparencyTolerance,
       optionValue_mapdatFilenameUseId,
@@ -1060,7 +1089,6 @@ class MapartController extends Component {
       preProcessingValue_warmth,
       preProcessingValue_backgroundColourSelect,
       preProcessingValue_backgroundColour,
-      optionValue_extras_moreStaircasingOptions,
       uploadedImage,
       uploadedImage_baseFilename,
       presets,
@@ -1069,6 +1097,19 @@ class MapartController extends Component {
       mapPreviewWorker_inProgress,
       twoColumnLayout,
     } = this.state;
+    const optionValue_whereSupportBlocks = this.estimatedWhereSupportBlocks();
+    // what every download needs to build a schematic; GreenButtons gets it directly and via ImageEditor
+    const schematicProps = {
+      optionValue_schematic_shadingMethod,
+      optionValue_schematic_lateShading,
+      optionValue_schematic_support,
+      optionValue_supportBlock,
+      optionValue_schematic_shadeBlock,
+      optionValue_schematic_suppressDirection,
+      optionValue_schematic_suppressOneDirection,
+      optionValue_schematic_keepReusableBlocks,
+      optionValue_schematic_blockRecycling,
+    };
     return (
       <div className={`mapartController ${twoColumnLayout ? "mapartController_twoColumn" : "mapartController_stacked"}`} ref={this.layoutRef}>
         <div className="sectionSettingsAndButtons" ref={this.leftTopRef}>
@@ -1098,12 +1139,25 @@ class MapartController extends Component {
             optionValue_gammaCorrectAveraging={optionValue_gammaCorrectAveraging}
             onOptionChange_gammaCorrectAveraging={this.onOptionChange_gammaCorrectAveraging}
             optionValue_staircasing={optionValue_staircasing}
-            onOptionChange_staircasing={this.onOptionChange_staircasing}
             onOptionChange_staircasingCheckbox={this.onOptionChange_staircasingCheckbox}
-            optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
-            onOptionChange_WhereSupportBlocks={this.onOptionChange_WhereSupportBlocks}
+            optionValue_schematic_shadingMethod={optionValue_schematic_shadingMethod}
+            onOptionChange_schematic_shadingMethod={this.onOptionChange_schematic_shadingMethod}
+            optionValue_schematic_lateShading={optionValue_schematic_lateShading}
+            onOptionChange_schematic_lateShading={this.onOptionChange_schematic_lateShading}
+            optionValue_schematic_support={optionValue_schematic_support}
+            onOptionChange_schematic_support={this.onOptionChange_schematic_support}
             optionValue_supportBlock={optionValue_supportBlock}
             setOption_SupportBlock={this.setOption_SupportBlock}
+            optionValue_schematic_shadeBlock={optionValue_schematic_shadeBlock}
+            setOption_schematic_shadeBlock={this.setOption_schematic_shadeBlock}
+            optionValue_schematic_suppressDirection={optionValue_schematic_suppressDirection}
+            onOptionChange_schematic_suppressDirection={this.onOptionChange_schematic_suppressDirection}
+            optionValue_schematic_suppressOneDirection={optionValue_schematic_suppressOneDirection}
+            onOptionChange_schematic_suppressOneDirection={this.onOptionChange_schematic_suppressOneDirection}
+            optionValue_schematic_keepReusableBlocks={optionValue_schematic_keepReusableBlocks}
+            onOptionChange_schematic_keepReusableBlocks={this.onOptionChange_schematic_keepReusableBlocks}
+            optionValue_schematic_blockRecycling={optionValue_schematic_blockRecycling}
+            onOptionChange_schematic_blockRecycling={this.onOptionChange_schematic_blockRecycling}
             optionValue_transparency={optionValue_transparency}
             onOptionChange_transparency={this.onOptionChange_transparency}
             optionValue_transparencyTolerance={optionValue_transparencyTolerance}
@@ -1158,8 +1212,6 @@ class MapartController extends Component {
             preProcessingValue_backgroundColour={preProcessingValue_backgroundColour}
             onOptionChange_PreProcessingBackgroundColour={this.onOptionChange_PreProcessingBackgroundColour}
             onOptionChange_PreProcessingResetAll={this.onOptionChange_PreProcessingResetAll}
-            optionValue_extras_moreStaircasingOptions={optionValue_extras_moreStaircasingOptions}
-            onOptionChange_extras_moreStaircasingOptions={this.onOptionChange_extras_moreStaircasingOptions}
           />
           <GreenButtons
             getLocaleString={getLocaleString}
@@ -1176,8 +1228,7 @@ class MapartController extends Component {
             optionValue_downscaleMethod={optionValue_downscaleMethod}
             optionValue_gammaCorrectAveraging={optionValue_gammaCorrectAveraging}
             optionValue_staircasing={optionValue_staircasing}
-            optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
-            optionValue_supportBlock={optionValue_supportBlock}
+            {...schematicProps}
             optionValue_transparency={optionValue_transparency}
             optionValue_transparencyTolerance={optionValue_transparencyTolerance}
             optionValue_mapdatFilenameUseId={optionValue_mapdatFilenameUseId}
@@ -1268,7 +1319,7 @@ class MapartController extends Component {
               optionValue_cropImage_percent_y={optionValue_cropImage_percent_y}
               optionValue_staircasing={optionValue_staircasing}
               optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
-              optionValue_supportBlock={optionValue_supportBlock}
+              {...schematicProps}
               optionValue_transparency={optionValue_transparency}
               optionValue_transparencyTolerance={optionValue_transparencyTolerance}
               optionValue_mapdatFilenameUseId={optionValue_mapdatFilenameUseId}
