@@ -27,10 +27,11 @@ You can find the original MapartCraft tool on [rebane2001.com](https://rebane200
 # Credits/Thanks
 
 - Minecraft for the block textures
+- [EvModder](https://evmodder.net/)'s superb schematic generation tools
 - [KenPixel Mini Square](https://opengameart.org/content/kenney-fonts) font by [Kenney](https://www.kenney.nl/)
 - [pako](https://www.npmjs.com/package/pako)'s zipping library
 - [jszip](https://www.npmjs.com/package/jszip)'s zipping library
 - [OpenMoji](https://github.com/hfg-gmuend/openmoji) for flags
 - Translation credits can be seen on the translated pages
 - [SelfAdjointOperator](https://github.com/SelfAdjointOperator) for some extra features
-- Code contributors can be seen on the [contributions page](https://github.com/mike2b2t/mapartcraft/graphs/contributors)
+- Code contributors can be seen on the [contributions page](https://github.com/ra1ning-repos/mapartcraft/graphs/contributors)
