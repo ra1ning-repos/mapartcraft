@@ -22,11 +22,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Single deploy job since we're just deploying
+  # Build the site and upload it for Pages
   build:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -44,6 +41,26 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./mapartcraft
+
+  # Publish what the build job uploaded. Deploying in its own job means the deploy never looks for the
+  # upload the instant it finishes, and a failed deploy can be re-run on its own ("Re-run failed jobs")
+  # without rebuilding or uploading a second copy.
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+      # Pages sometimes answers "Deployment failed, try again later." on its own; give it one more try
+      - name: Wait before retrying
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 60
+      - name: Deploy to GitHub Pages (retry)
+        id: deployment_retry
+        if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v4
