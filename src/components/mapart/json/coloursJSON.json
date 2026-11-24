@@ -432,6 +432,110 @@
                 "supportBlockMandatory": false,
                 "flammable": false,
                 "presetIndex": 12
+            },
+            "13": {
+                "displayName": "Cut Sandstone",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "cut_sandstone",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 13
+            },
+            "14": {
+                "displayName": "Smooth Sandstone",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "smooth_sandstone",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 14
+            },
+            "15": {
+                "displayName": "Candle",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "candle",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 15
+            },
+            "16": {
+                "displayName": "Scaffolding",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "scaffolding",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": true,
+                "presetIndex": 16
+            },
+            "17": {
+                "displayName": "Stripped Birch Log",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "stripped_birch_log",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 17
+            },
+            "18": {
+                "displayName": "Birch Wood",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "birch_wood",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 18
+            },
+            "19": {
+                "displayName": "Stripped Birch Wood",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "stripped_birch_wood",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 19
+            },
+            "20": {
+                "displayName": "Turtle Egg",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "turtle_egg",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 20
             }
         },
         "mapdatId": 2,
@@ -752,6 +856,19 @@
                 "supportBlockMandatory": false,
                 "flammable": false,
                 "presetIndex": 2
+            },
+            "3": {
+                "displayName": "Frosted Ice",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "frosted_ice",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 3
             }
         },
         "mapdatId": 5,
@@ -926,6 +1043,70 @@
                 "supportBlockMandatory": false,
                 "flammable": true,
                 "presetIndex": 6
+            },
+            "7": {
+                "displayName": "Lodestone",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "lodestone",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 7
+            },
+            "8": {
+                "displayName": "Anvil",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "anvil",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 8
+            },
+            "9": {
+                "displayName": "Lantern",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "lantern",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 9
+            },
+            "10": {
+                "displayName": "Soul Lantern",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "soul_lantern",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 10
+            },
+            "11": {
+                "displayName": "Closed Eyeblossom",
+                "validVersions": {
+                    "1.21.5": {
+                        "NBTName": "closed_eyeblossom",
+                        "NBTArgs": {}
+                    }
+                },
+                "supportBlockMandatory": true,
+                "flammable": true,
+                "presetIndex": 11
             }
         },
         "mapdatId": 6,
@@ -1238,6 +1419,97 @@
                 "supportBlockMandatory": true,
                 "flammable": true,
                 "presetIndex": 9
+            },
+            "11": {
+                "displayName": "Flowering Azalea Leaves",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "flowering_azalea_leaves",
+                        "NBTArgs": {
+                            "persistent": "true"
+                        }
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 11
+            },
+            "12": {
+                "displayName": "Big Dripleaf",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "big_dripleaf",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": true,
+                "presetIndex": 12
+            },
+            "13": {
+                "displayName": "Fern",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "fern",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": true,
+                "presetIndex": 13
+            },
+            "14": {
+                "displayName": "Short Grass",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "short_grass",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": true,
+                "presetIndex": 14
+            },
+            "15": {
+                "displayName": "Poppy",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "poppy",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": true,
+                "presetIndex": 15
+            },
+            "16": {
+                "displayName": "Bush",
+                "validVersions": {
+                    "1.21.5": {
+                        "NBTName": "bush",
+                        "NBTArgs": {}
+                    }
+                },
+                "supportBlockMandatory": true,
+                "flammable": true,
+                "presetIndex": 16
+            },
+            "17": {
+                "displayName": "Firefly Bush",
+                "validVersions": {
+                    "1.21.5": {
+                        "NBTName": "firefly_bush",
+                        "NBTArgs": {}
+                    }
+                },
+                "supportBlockMandatory": true,
+                "flammable": true,
+                "presetIndex": 17
             }
         },
         "mapdatId": 7,
@@ -1618,6 +1890,58 @@
                 "supportBlockMandatory": false,
                 "flammable": false,
                 "presetIndex": 11
+            },
+            "12": {
+                "displayName": "Polished Granite",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "polished_granite",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 12
+            },
+            "13": {
+                "displayName": "Stripped Jungle Log",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "stripped_jungle_log",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 13
+            },
+            "14": {
+                "displayName": "Jungle Wood",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "jungle_wood",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 14
+            },
+            "15": {
+                "displayName": "Stripped Jungle Wood",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "stripped_jungle_wood",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 15
             }
         },
         "mapdatId": 10,
@@ -2073,6 +2397,149 @@
                 "supportBlockMandatory": true,
                 "flammable": false,
                 "presetIndex": 7
+            },
+            "17": {
+                "displayName": "Mossy Stone Bricks",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "mossy_stone_bricks",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 17
+            },
+            "18": {
+                "displayName": "Polished Andesite",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "polished_andesite",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 18
+            },
+            "19": {
+                "displayName": "Coal Ore",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "coal_ore",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 19
+            },
+            "20": {
+                "displayName": "Copper Ore",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "copper_ore",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 20
+            },
+            "21": {
+                "displayName": "Iron Ore",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "iron_ore",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 21
+            },
+            "22": {
+                "displayName": "Gold Ore",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "gold_ore",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 22
+            },
+            "23": {
+                "displayName": "Redstone Ore",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "redstone_ore",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 23
+            },
+            "24": {
+                "displayName": "Lapis Ore",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "lapis_ore",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 24
+            },
+            "25": {
+                "displayName": "Emerald Ore",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "emerald_ore",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 25
+            },
+            "26": {
+                "displayName": "Diamond Ore",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "diamond_ore",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 26
+            },
+            "27": {
+                "displayName": "Pale Oak Wood",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "pale_oak_wood",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 27
             }
         },
         "mapdatId": 11,
@@ -2285,6 +2752,67 @@
                 "supportBlockMandatory": false,
                 "flammable": false,
                 "presetIndex": 8
+            },
+            "9": {
+                "displayName": "Waterlogged Flowering Azalea Leaves",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "flowering_azalea_leaves",
+                        "NBTArgs": {
+                            "persistent": "true",
+                            "waterlogged": "true"
+                        }
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 9
+            },
+            "10": {
+                "displayName": "Waterlogged Cherry Leaves",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "cherry_leaves",
+                        "NBTArgs": {
+                            "persistent": "true",
+                            "waterlogged": "true"
+                        }
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 10
+            },
+            "11": {
+                "displayName": "Waterlogged Pale Oak Leaves",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "pale_oak_leaves",
+                        "NBTArgs": {
+                            "persistent": "true",
+                            "waterlogged": "true"
+                        }
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 11
+            },
+            "12": {
+                "displayName": "Ice (melts into water)",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "ice",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 12
             }
         },
         "mapdatId": 12,
@@ -2516,6 +3044,84 @@
                 "supportBlockMandatory": false,
                 "flammable": true,
                 "presetIndex": 6
+            },
+            "8": {
+                "displayName": "Oak Wood",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "oak_wood",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 8
+            },
+            "9": {
+                "displayName": "Stripped Oak Wood",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "stripped_oak_wood",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 9
+            },
+            "10": {
+                "displayName": "Stripped Oak Log",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "stripped_oak_log",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 10
+            },
+            "11": {
+                "displayName": "Beehive",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "beehive",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 11
+            },
+            "12": {
+                "displayName": "Daylight Detector",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "daylight_detector",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 12
+            },
+            "13": {
+                "displayName": "Dead Bush",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "dead_bush",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": true,
+                "presetIndex": 13
             }
         },
         "mapdatId": 13,
@@ -2778,6 +3384,84 @@
                 "supportBlockMandatory": true,
                 "flammable": false,
                 "presetIndex": 10
+            },
+            "11": {
+                "displayName": "Quartz Bricks",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "quartz_bricks",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 11
+            },
+            "12": {
+                "displayName": "Smooth Quartz",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "smooth_quartz",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 12
+            },
+            "13": {
+                "displayName": "Quartz Pillar",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "quartz_pillar",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 13
+            },
+            "14": {
+                "displayName": "Polished Diorite",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "polished_diorite",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 14
+            },
+            "15": {
+                "displayName": "Stripped Pale Oak Log",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "stripped_pale_oak_log",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 15
+            },
+            "16": {
+                "displayName": "Stripped Pale Oak Wood",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "stripped_pale_oak_wood",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 16
             }
         },
         "mapdatId": 14,
@@ -3029,6 +3713,19 @@
                 "supportBlockMandatory": true,
                 "flammable": false,
                 "presetIndex": 7
+            },
+            "8": {
+                "displayName": "Powder Snow",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "powder_snow",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 8
             }
         },
         "mapdatId": 8,
@@ -3576,6 +4273,123 @@
                 "supportBlockMandatory": true,
                 "flammable": false,
                 "presetIndex": 18
+            },
+            "20": {
+                "displayName": "Orange Candle",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "orange_candle",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 20
+            },
+            "21": {
+                "displayName": "Stripped Acacia Log",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "stripped_acacia_log",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 21
+            },
+            "22": {
+                "displayName": "Stripped Acacia Wood",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "stripped_acacia_wood",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 22
+            },
+            "23": {
+                "displayName": "Carved Pumpkin",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "carved_pumpkin",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 23
+            },
+            "24": {
+                "displayName": "Jack o'Lantern",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "jack_o_lantern",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 24
+            },
+            "25": {
+                "displayName": "Cut Red Sandstone",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "cut_red_sandstone",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 25
+            },
+            "26": {
+                "displayName": "Smooth Red Sandstone",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "smooth_red_sandstone",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 26
+            },
+            "27": {
+                "displayName": "Waxed Cut Copper",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "waxed_cut_copper",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 27
+            },
+            "28": {
+                "displayName": "Open Eyeblossom",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "open_eyeblossom",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": true,
+                "presetIndex": 28
             }
         },
         "mapdatId": 15,
@@ -3821,6 +4635,32 @@
                 "supportBlockMandatory": true,
                 "flammable": false,
                 "presetIndex": 7
+            },
+            "8": {
+                "displayName": "Magenta Candle",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "magenta_candle",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 8
+            },
+            "9": {
+                "displayName": "Purpur Pillar",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "purpur_pillar",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 9
             }
         },
         "mapdatId": 16,
@@ -4038,6 +4878,19 @@
                 "supportBlockMandatory": true,
                 "flammable": false,
                 "presetIndex": 6
+            },
+            "7": {
+                "displayName": "Light Blue Candle",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "light_blue_candle",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 7
             }
         },
         "mapdatId": 17,
@@ -4381,6 +5234,82 @@
                 "supportBlockMandatory": true,
                 "flammable": false,
                 "presetIndex": 13
+            },
+            "14": {
+                "displayName": "Yellow Candle",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "yellow_candle",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 14
+            },
+            "15": {
+                "displayName": "Stripped Bamboo Block",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "stripped_bamboo_block",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 15
+            },
+            "16": {
+                "displayName": "Wet Sponge",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "wet_sponge",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 16
+            },
+            "17": {
+                "displayName": "Bee Nest",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "bee_nest",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 17
+            },
+            "18": {
+                "displayName": "Tall Dry Grass",
+                "validVersions": {
+                    "1.21.5": {
+                        "NBTName": "tall_dry_grass",
+                        "NBTArgs": {}
+                    }
+                },
+                "supportBlockMandatory": true,
+                "flammable": true,
+                "presetIndex": 18
+            },
+            "19": {
+                "displayName": "Short Dry Grass",
+                "validVersions": {
+                    "1.21.5": {
+                        "NBTName": "short_dry_grass",
+                        "NBTArgs": {}
+                    }
+                },
+                "supportBlockMandatory": true,
+                "flammable": true,
+                "presetIndex": 19
             }
         },
         "mapdatId": 18,
@@ -4605,6 +5534,19 @@
                 "supportBlockMandatory": false,
                 "flammable": false,
                 "presetIndex": 6
+            },
+            "7": {
+                "displayName": "Lime Candle",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "lime_candle",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 7
             }
         },
         "mapdatId": 19,
@@ -4837,6 +5779,31 @@
                 "supportBlockMandatory": false,
                 "flammable": true,
                 "presetIndex": 7
+            },
+            "8": {
+                "displayName": "Pink Candle",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "pink_candle",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 8
+            },
+            "9": {
+                "displayName": "Cactus Flower",
+                "validVersions": {
+                    "1.21.5": {
+                        "NBTName": "cactus_flower",
+                        "NBTArgs": {}
+                    }
+                },
+                "supportBlockMandatory": true,
+                "flammable": true,
+                "presetIndex": 9
             }
         },
         "mapdatId": 20,
@@ -5191,6 +6158,169 @@
                 "supportBlockMandatory": false,
                 "flammable": true,
                 "presetIndex": 12
+            },
+            "13": {
+                "displayName": "Gray Candle",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "gray_candle",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 13
+            },
+            "14": {
+                "displayName": "Dead Tube Coral",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "dead_tube_coral",
+                        "NBTArgs": {
+                            "waterlogged": "false"
+                        }
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 14
+            },
+            "15": {
+                "displayName": "Dead Brain Coral",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "dead_brain_coral",
+                        "NBTArgs": {
+                            "waterlogged": "false"
+                        }
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 15
+            },
+            "16": {
+                "displayName": "Dead Bubble Coral",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "dead_bubble_coral",
+                        "NBTArgs": {
+                            "waterlogged": "false"
+                        }
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 16
+            },
+            "17": {
+                "displayName": "Dead Fire Coral",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "dead_fire_coral",
+                        "NBTArgs": {
+                            "waterlogged": "false"
+                        }
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 17
+            },
+            "18": {
+                "displayName": "Dead Horn Coral",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "dead_horn_coral",
+                        "NBTArgs": {
+                            "waterlogged": "false"
+                        }
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 18
+            },
+            "19": {
+                "displayName": "Dead Tube Coral Fan",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "dead_tube_coral_fan",
+                        "NBTArgs": {
+                            "waterlogged": "false"
+                        }
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 19
+            },
+            "20": {
+                "displayName": "Dead Brain Coral Fan",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "dead_brain_coral_fan",
+                        "NBTArgs": {
+                            "waterlogged": "false"
+                        }
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 20
+            },
+            "21": {
+                "displayName": "Dead Bubble Coral Fan",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "dead_bubble_coral_fan",
+                        "NBTArgs": {
+                            "waterlogged": "false"
+                        }
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 21
+            },
+            "22": {
+                "displayName": "Dead Fire Coral Fan",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "dead_fire_coral_fan",
+                        "NBTArgs": {
+                            "waterlogged": "false"
+                        }
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 22
+            },
+            "23": {
+                "displayName": "Dead Horn Coral Fan",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "dead_horn_coral_fan",
+                        "NBTArgs": {
+                            "waterlogged": "false"
+                        }
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 23
             }
         },
         "mapdatId": 21,
@@ -5417,6 +6547,19 @@
                 "supportBlockMandatory": true,
                 "flammable": true,
                 "presetIndex": 7
+            },
+            "8": {
+                "displayName": "Light Gray Candle",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "light_gray_candle",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 8
             }
         },
         "mapdatId": 22,
@@ -5701,6 +6844,60 @@
                 "supportBlockMandatory": true,
                 "flammable": false,
                 "presetIndex": 9
+            },
+            "10": {
+                "displayName": "Cyan Candle",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "cyan_candle",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 10
+            },
+            "11": {
+                "displayName": "Nether Sprouts",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "nether_sprouts",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 11
+            },
+            "12": {
+                "displayName": "Twisting Vines",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "twisting_vines",
+                        "NBTArgs": {
+                            "age": "25"
+                        }
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": true,
+                "presetIndex": 12
+            },
+            "13": {
+                "displayName": "Sculk Sensor",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "sculk_sensor",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 13
             }
         },
         "mapdatId": 23,
@@ -5941,6 +7138,32 @@
                 "supportBlockMandatory": false,
                 "flammable": false,
                 "presetIndex": 7
+            },
+            "8": {
+                "displayName": "Purple Candle",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "purple_candle",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 8
+            },
+            "9": {
+                "displayName": "Amethyst Cluster",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "amethyst_cluster",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 9
             }
         },
         "mapdatId": 24,
@@ -6138,6 +7361,19 @@
                 "supportBlockMandatory": false,
                 "flammable": false,
                 "presetIndex": 5
+            },
+            "6": {
+                "displayName": "Blue Candle",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "blue_candle",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 6
             }
         },
         "mapdatId": 25,
@@ -6536,6 +7772,71 @@
                 "supportBlockMandatory": true,
                 "flammable": true,
                 "presetIndex": 13
+            },
+            "14": {
+                "displayName": "Brown Candle",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "brown_candle",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 14
+            },
+            "15": {
+                "displayName": "Stripped Dark Oak Log",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "stripped_dark_oak_log",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 15
+            },
+            "16": {
+                "displayName": "Dark Oak Wood",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "dark_oak_wood",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 16
+            },
+            "17": {
+                "displayName": "Stripped Dark Oak Wood",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "stripped_dark_oak_wood",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 17
+            },
+            "18": {
+                "displayName": "Brown Mushroom",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "brown_mushroom",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 18
             }
         },
         "mapdatId": 26,
@@ -6793,6 +8094,34 @@
                 "supportBlockMandatory": true,
                 "flammable": true,
                 "presetIndex": 8
+            },
+            "9": {
+                "displayName": "Green Candle",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "green_candle",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 9
+            },
+            "10": {
+                "displayName": "Sea Pickle",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "sea_pickle",
+                        "NBTArgs": {
+                            "waterlogged": "false"
+                        }
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 10
             }
         },
         "mapdatId": 27,
@@ -7183,6 +8512,84 @@
                 "supportBlockMandatory": false,
                 "flammable": false,
                 "presetIndex": 14
+            },
+            "15": {
+                "displayName": "Red Candle",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "red_candle",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 15
+            },
+            "16": {
+                "displayName": "Stripped Mangrove Log",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "stripped_mangrove_log",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 16
+            },
+            "17": {
+                "displayName": "Mangrove Wood",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "mangrove_wood",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 17
+            },
+            "18": {
+                "displayName": "Stripped Mangrove Wood",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "stripped_mangrove_wood",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 18
+            },
+            "19": {
+                "displayName": "Nether Wart",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "nether_wart",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 19
+            },
+            "20": {
+                "displayName": "Red Mushroom",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "red_mushroom",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 20
             }
         },
         "mapdatId": 28,
@@ -7617,6 +9024,86 @@
                 "supportBlockMandatory": false,
                 "flammable": false,
                 "presetIndex": 16
+            },
+            "18": {
+                "displayName": "Black Candle",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "black_candle",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 18
+            },
+            "19": {
+                "displayName": "Polished Blackstone",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "polished_blackstone",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 19
+            },
+            "20": {
+                "displayName": "Polished Blackstone Bricks",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "polished_blackstone_bricks",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 20
+            },
+            "21": {
+                "displayName": "Ancient Debris",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "ancient_debris",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 21
+            },
+            "22": {
+                "displayName": "Polished Basalt",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "polished_basalt",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 22
+            },
+            "23": {
+                "displayName": "Sculk Vein",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "sculk_vein",
+                        "NBTArgs": {
+                            "down": "true"
+                        }
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 23
             }
         },
         "mapdatId": 29,
@@ -7712,6 +9199,19 @@
                 "supportBlockMandatory": false,
                 "flammable": false,
                 "presetIndex": 2
+            },
+            "3": {
+                "displayName": "Bell",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "bell",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": true,
+                "flammable": false,
+                "presetIndex": 3
             }
         },
         "mapdatId": 30,
@@ -7892,6 +9392,21 @@
                 "supportBlockMandatory": true,
                 "flammable": false,
                 "presetIndex": 3
+            },
+            "6": {
+                "displayName": "Conduit",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "conduit",
+                        "NBTArgs": {
+                            "waterlogged": "false"
+                        }
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 6
             }
         },
         "mapdatId": 31,
@@ -8266,6 +9781,84 @@
                 "supportBlockMandatory": false,
                 "flammable": false,
                 "presetIndex": 8
+            },
+            "9": {
+                "displayName": "Stripped Spruce Log",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "stripped_spruce_log",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 9
+            },
+            "10": {
+                "displayName": "Spruce Wood",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "spruce_wood",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 10
+            },
+            "11": {
+                "displayName": "Stripped Spruce Wood",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "stripped_spruce_wood",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 11
+            },
+            "12": {
+                "displayName": "Muddy Mangrove Roots",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "muddy_mangrove_roots",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 12
+            },
+            "13": {
+                "displayName": "Campfire",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "campfire",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 13
+            },
+            "14": {
+                "displayName": "Soul Campfire",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "soul_campfire",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 14
             }
         },
         "mapdatId": 34,
@@ -8490,6 +10083,32 @@
                 "supportBlockMandatory": true,
                 "flammable": false,
                 "presetIndex": 7
+            },
+            "8": {
+                "displayName": "Nether Gold Ore",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "nether_gold_ore",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 8
+            },
+            "9": {
+                "displayName": "Nether Quartz Ore",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "nether_quartz_ore",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 9
             }
         },
         "mapdatId": 35,
@@ -9219,6 +10838,32 @@
                 "supportBlockMandatory": false,
                 "flammable": true,
                 "presetIndex": 3
+            },
+            "5": {
+                "displayName": "Polished Tuff",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "polished_tuff",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 5
+            },
+            "6": {
+                "displayName": "Tuff Bricks",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "tuff_bricks",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 6
             }
         },
         "mapdatId": 43,
@@ -9348,6 +10993,19 @@
                 "supportBlockMandatory": true,
                 "flammable": false,
                 "presetIndex": 4
+            },
+            "5": {
+                "displayName": "Waxed Exposed Cut Copper",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "waxed_exposed_cut_copper",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 5
             }
         },
         "mapdatId": 44,
@@ -9479,6 +11137,19 @@
                 "supportBlockMandatory": false,
                 "flammable": false,
                 "presetIndex": 0
+            },
+            "1": {
+                "displayName": "Purple Shulker Box",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "purple_shulker_box",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 1
             }
         },
         "mapdatId": 46,
@@ -9700,6 +11371,20 @@
                 "supportBlockMandatory": true,
                 "flammable": true,
                 "presetIndex": 1
+            },
+            "2": {
+                "displayName": "Pale Oak Leaves",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "pale_oak_leaves",
+                        "NBTArgs": {
+                            "persistent": "true"
+                        }
+                    }
+                },
+                "supportBlockMandatory": false,
+                "flammable": true,
+                "presetIndex": 2
             }
         },
         "mapdatId": 49,
@@ -10160,6 +11845,45 @@
                 "supportBlockMandatory": true,
                 "flammable": false,
                 "presetIndex": 2
+            },
+            "3": {
+                "displayName": "Waxed Oxidized Cut Copper",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "waxed_oxidized_cut_copper",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 3
+            },
+            "4": {
+                "displayName": "Oxidized Copper",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "oxidized_copper",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 4
+            },
+            "5": {
+                "displayName": "Oxidized Cut Copper",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "oxidized_cut_copper",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 5
             }
         },
         "mapdatId": 55,
@@ -10326,6 +12050,19 @@
                 "supportBlockMandatory": true,
                 "flammable": false,
                 "presetIndex": 5
+            },
+            "7": {
+                "displayName": "Waxed Weathered Cut Copper",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "waxed_weathered_cut_copper",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 7
             }
         },
         "mapdatId": 56,
@@ -10527,6 +12264,149 @@
                 "supportBlockMandatory": true,
                 "flammable": false,
                 "presetIndex": 2
+            },
+            "3": {
+                "displayName": "Polished Deepslate",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "polished_deepslate",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 3
+            },
+            "4": {
+                "displayName": "Deepslate Bricks",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "deepslate_bricks",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 4
+            },
+            "5": {
+                "displayName": "Deepslate Tiles",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "deepslate_tiles",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 5
+            },
+            "6": {
+                "displayName": "Deepslate Coal Ore",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "deepslate_coal_ore",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 6
+            },
+            "7": {
+                "displayName": "Deepslate Copper Ore",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "deepslate_copper_ore",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 7
+            },
+            "8": {
+                "displayName": "Deepslate Iron Ore",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "deepslate_iron_ore",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 8
+            },
+            "9": {
+                "displayName": "Deepslate Gold Ore",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "deepslate_gold_ore",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 9
+            },
+            "10": {
+                "displayName": "Deepslate Redstone Ore",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "deepslate_redstone_ore",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 10
+            },
+            "11": {
+                "displayName": "Deepslate Lapis Ore",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "deepslate_lapis_ore",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 11
+            },
+            "12": {
+                "displayName": "Deepslate Emerald Ore",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "deepslate_emerald_ore",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 12
+            },
+            "13": {
+                "displayName": "Deepslate Diamond Ore",
+                "validVersions": {
+                    "1.21.4": {
+                        "NBTName": "deepslate_diamond_ore",
+                        "NBTArgs": {}
+                    },
+                    "1.21.5": "&1.21.4"
+                },
+                "supportBlockMandatory": false,
+                "flammable": false,
+                "presetIndex": 13
             }
         },
         "mapdatId": 59,

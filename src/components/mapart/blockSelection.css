@@ -13,10 +13,13 @@
   flex-shrink: 0;
 }
 
+/* At most 20 blocks (38px each) to a line, the most any colour had before the 1.21.4+ additions; longer rows wrap
+   so the panel keeps its width and the two-column layout still fits. */
 .colourSetBlocks {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
+  max-width: 760px;
 }
 
 .blockSelectionExpanded {

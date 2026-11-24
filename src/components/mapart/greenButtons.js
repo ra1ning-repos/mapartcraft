@@ -19,6 +19,7 @@ import {
   legacyWhereSupportBlocksKey,
   mapTileColours,
   pngToNbtBlocks,
+  pngToNbtLateShading,
   pngToNbtOptions,
   pngToNbtVersionKey,
   rejectedBlockColourId,
@@ -207,9 +208,13 @@ class GreenButtons extends Component {
       optionValue_staircasing,
       optionValue_schematic_shadingMethod,
       optionValue_schematic_lateShading,
+      optionValue_schematic_layerGap,
+      optionValue_schematic_latePairsGap,
+      optionValue_schematic_crubTech,
       optionValue_schematic_support,
       optionValue_supportBlock,
       optionValue_schematic_shadeBlock,
+      optionValue_schematic_crubTechPushableBlock,
       optionValue_schematic_suppressDirection,
       optionValue_schematic_suppressOneDirection,
       optionValue_schematic_keepReusableBlocks,
@@ -229,18 +234,25 @@ class GreenButtons extends Component {
     const run = this.pngToNbtRun;
     const progressKey = zipped ? "buttonWidth_NBT_Split" : "buttonWidth_NBT_Joined";
     const mapCount = optionValue_mapSize_x * optionValue_mapSize_y;
-    const options = pngToNbtOptions({
+    const settings = {
       versionKey: pngToNbtVersionKey(optionValue_version.MCVersion),
       staircasing: optionValue_staircasing !== MapModes.SCHEMATIC_NBT.staircaseModes.OFF.uniqueId,
       shadingMethod: optionValue_schematic_shadingMethod,
+      lateShading: optionValue_schematic_lateShading,
+      layerGap: optionValue_schematic_layerGap,
+      latePairsGap: optionValue_schematic_latePairsGap,
+      crubTech: optionValue_schematic_crubTech,
       support: optionValue_schematic_support,
       supportBlock: optionValue_supportBlock,
       shadeBlock: optionValue_schematic_shadeBlock,
+      crubTechPushableBlock: optionValue_schematic_crubTechPushableBlock,
       suppressDirection: optionValue_schematic_suppressDirection,
       suppressOneDirection: optionValue_schematic_suppressOneDirection,
       keepReusableBlocks: optionValue_schematic_keepReusableBlocks,
       blockRecycling: optionValue_schematic_blockRecycling,
-    });
+    };
+    const options = pngToNbtOptions(settings);
+    const lateShading = pngToNbtLateShading(settings);
     const lookup = exactColourLookup(coloursJSON);
     const files = [];
     const notes = new Map(); // note -> the maps it applies to
@@ -268,11 +280,15 @@ class GreenButtons extends Component {
           }
           const { colors, used } = mapTileColours(pixelsData, optionValue_mapSize_x, whichMap_x, whichMap_y, lookup);
           const blocks = pngToNbtBlocks(used, coloursJSON, currentSelectedBlocks, optionValue_version.MCVersion);
-          const result = await generateMapTile(connection, { colors, blocks, options }, optionValue_schematic_lateShading, (kind, value) =>
+          const result = await generateMapTile(connection, { colors, blocks, options }, lateShading, (kind, value) =>
             addNote(this.pngToNbtAdjustmentNote(kind, value, options), thisMap)
           );
           if (run !== this.pngToNbtRun) {
             return;
+          }
+          // PNG-to-NBT gives a map more room between the layers when its blocks need it
+          if (options.layerGap !== undefined && result.effectiveOptions !== undefined && result.effectiveOptions.layerGap > options.layerGap) {
+            addNote(getLocaleString("DOWNLOAD/PNG-TO-NBT/LAYER-GAP-RAISED").replace("{gap}", result.effectiveOptions.layerGap), thisMap);
           }
           const stem = mapCount > 1 || zipped ? `${uploadedImage_baseFilename}_${whichMap_x}_${whichMap_y}` : uploadedImage_baseFilename;
           for (const file of result.files) {
@@ -377,9 +393,13 @@ class GreenButtons extends Component {
       optionValue_staircasing,
       optionValue_schematic_shadingMethod,
       optionValue_schematic_lateShading,
+      optionValue_schematic_layerGap,
+      optionValue_schematic_latePairsGap,
+      optionValue_schematic_crubTech,
       optionValue_schematic_support,
       optionValue_supportBlock,
       optionValue_schematic_shadeBlock,
+      optionValue_schematic_crubTechPushableBlock,
       optionValue_schematic_suppressDirection,
       optionValue_schematic_suppressOneDirection,
       optionValue_schematic_keepReusableBlocks,
@@ -424,9 +444,13 @@ class GreenButtons extends Component {
       prevProps.optionValue_staircasing !== optionValue_staircasing,
       prevProps.optionValue_schematic_shadingMethod !== optionValue_schematic_shadingMethod,
       prevProps.optionValue_schematic_lateShading !== optionValue_schematic_lateShading,
+      prevProps.optionValue_schematic_layerGap !== optionValue_schematic_layerGap,
+      prevProps.optionValue_schematic_latePairsGap !== optionValue_schematic_latePairsGap,
+      prevProps.optionValue_schematic_crubTech !== optionValue_schematic_crubTech,
       prevProps.optionValue_schematic_support !== optionValue_schematic_support,
       prevProps.optionValue_supportBlock !== optionValue_supportBlock,
       prevProps.optionValue_schematic_shadeBlock !== optionValue_schematic_shadeBlock,
+      prevProps.optionValue_schematic_crubTechPushableBlock !== optionValue_schematic_crubTechPushableBlock,
       prevProps.optionValue_schematic_suppressDirection !== optionValue_schematic_suppressDirection,
       prevProps.optionValue_schematic_suppressOneDirection !== optionValue_schematic_suppressOneDirection,
       prevProps.optionValue_schematic_keepReusableBlocks !== optionValue_schematic_keepReusableBlocks,

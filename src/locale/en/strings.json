@@ -45,7 +45,8 @@
       "EVERYTHING": "Everything",
       "CARPETS": "Carpets",
       "GREYSCALE": "Greyscale",
-      "PISTON-CLEARABLE": "Piston clearable"
+      "PISTON-CLEARABLE": "Piston clearable",
+      "CRUBTECH": "CrubTech"
     },
     "UNSUPPORTED-PAST": "Unsupported past",
     "ADD-CUSTOM": {
@@ -180,6 +181,12 @@
         "LATE-FILLERS": "Late fillers",
         "LATE-PAIRS": "Late pairs"
       },
+      "CRUBTECH": "CrubTech",
+      "CRUBTECH-TT": "Build for the CrubTech 2-layer platform: moss and pushable blocks for the shading and support, with the direction, spacing and support set the way the platform needs them. Ticking it also switches to the CrubTech block preset, unless you're using a palette of your own.",
+      "LAYER-GAP": "Layer gap",
+      "LAYER-GAP-TT": "How many blocks apart the lower and upper layers are.",
+      "LATE-PAIRS-GAP": "Late-pairs gap",
+      "LATE-PAIRS-GAP-TT": "How far above the upper layer the late pairs go.",
       "SUPPORT": {
         "TITLE": "Support",
         "TITLE-TT": "Blocks added under the map art for survival building.",
@@ -200,6 +207,8 @@
       "NOOBLINE-BLOCK-TT": "The block for the noobline!",
       "SHADE-BLOCK": "Shade block",
       "SHADE-BLOCK-TT": "Also includes noobline",
+      "PUSHABLE-BLOCK": "Pushable block",
+      "PUSHABLE-BLOCK-TT": "CrubTech's shading and support blocks that have to stay pushable by pistons and slime. The breakable ones are always moss.",
       "SUPPRESSION-DIRECTION": {
         "TITLE": "Suppression direction",
         "TITLE-TT": "Like which sides you start and end on",
@@ -303,6 +312,7 @@
       "MAP": "Map {x},{y}",
       "NOTES": "Notes from PNG-to-NBT:",
       "LATE-SHADING-USED": "Needed late shading, so it was built as 2-Layer with {method}.",
+      "LAYER-GAP-RAISED": "Its blocks need a layer gap of at least {gap}, so it was built with that.",
       "DIRECTION-CHANGED": "Suppressing {from} would lose some of its void or water shading, so it was built {to} instead.",
       "CONNECT-FAILED": "Couldn't reach PNG-to-NBT on evmodder.net, so no schematic was made. Check your connection and try again.",
       "BLOCK-REJECTED": "PNG-to-NBT doesn't accept {block} as {colour} in Minecraft {version}. Pick a different block for that colour.",

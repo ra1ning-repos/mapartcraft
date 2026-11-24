@@ -91,13 +91,30 @@ const DIRECTION_CYCLE = ["west_to_east", "north_to_south", "east_to_west", "sout
 export const SCHEMATIC_DEFAULTS = {
   shadingMethod: "staircase_classic",
   lateShading: "suppress_2layer_late_fillers",
+  layerGap: 5,
+  latePairsGap: 1,
+  crubTech: false,
   support: "steps",
   supportBlock: "cobblestone",
   shadeBlock: "resin_block",
+  crubTechPushableBlock: "resin_block",
   suppressDirection: "east_to_west",
   suppressOneDirection: true,
   keepReusableBlocks: true,
   blockRecycling: true,
+};
+
+// The largest layer gap offered, as on PNG-to-NBT's site (its API would take up to 63).
+export const MAX_LAYER_GAP = 20;
+
+// CrubTech builds for one specific 2-layer platform, so PNG-to-NBT fixes these for it: the layer spacing,
+// east-to-west in one direction, support either none or under everything, late pairs for late shading, and
+// moss as the breakable block (only the pushable one can be chosen).
+export const CRUBTECH = {
+  layerGap: 14,
+  latePairsGap: 10,
+  suppressDirection: "east_to_west",
+  lateShading: "suppress_2layer_late_pairs",
 };
 
 export function isSuppressMethod(method) {
@@ -127,6 +144,24 @@ export function legacyShadingMethod(method) {
 export function legacySupportMode(support) {
   const mode = SUPPORT_MODES.find((entry) => entry.value === support);
   return mode !== undefined && mode.legacy !== null ? support : "none";
+}
+
+// Under CrubTech, any support at all means support under everything.
+export function crubTechSupportMode(support) {
+  return support === "none" ? "none" : "all";
+}
+
+// The 2-Layer spacing actually used, following PNG-to-NBT: Fragile and All support need a gap of at least 3,
+// and the late pairs have to stay below the build limit. PNG-to-NBT can raise the gap further for a map
+// whose blocks need more room.
+export function twoLayerSpacing(support, layerGap, latePairsGap, crubTech) {
+  const minLayerGap = support === "fragile" || support === "all" ? 3 : 2;
+  if (crubTech) {
+    return { minLayerGap, layerGap: CRUBTECH.layerGap, maxLatePairsGap: 64 - CRUBTECH.layerGap, latePairsGap: CRUBTECH.latePairsGap };
+  }
+  const gap = Math.min(MAX_LAYER_GAP, Math.max(minLayerGap, layerGap));
+  const maxLatePairsGap = 64 - gap;
+  return { minLayerGap, layerGap: gap, maxLatePairsGap, latePairsGap: Math.max(1, Math.min(maxLatePairsGap, latePairsGap)) };
 }
 
 // Key into whereSupportBlocksModes.json for a support mode.
@@ -226,23 +261,48 @@ export function mapTileColours(pixelsData, mapsWide, whichMap_x, whichMap_y, loo
 
 // ---------------------------------------------------------------- generation
 
+// CrubTech only applies to 2-Layer builds.
+export function usesCrubTech(settings) {
+  return settings.crubTech && settings.staircasing && settings.shadingMethod === "suppress_2layer";
+}
+
+// The 2-Layer variant for maps that need late shading.
+export function pngToNbtLateShading(settings) {
+  return usesCrubTech(settings) ? CRUBTECH.lateShading : settings.lateShading;
+}
+
 export function pngToNbtOptions(settings) {
   const mode = settings.staircasing ? settings.shadingMethod : "flat";
-  const options = { mode, minecraftVersion: settings.versionKey, support: settings.support };
-  // an empty field means PNG-to-NBT's default, which is what the field shows as its placeholder
-  if (settings.support !== "none" && cleanBlockName(settings.supportBlock) !== "") {
+  const crubTech = usesCrubTech(settings);
+  const support = crubTech ? crubTechSupportMode(settings.support) : settings.support;
+  const options = { mode, minecraftVersion: settings.versionKey, support };
+  // an empty field means PNG-to-NBT's default, which is what the field shows as its placeholder;
+  // CrubTech uses its own breakable / pushable blocks instead of the support and noobline blocks
+  if (!crubTech && support !== "none" && cleanBlockName(settings.supportBlock) !== "") {
     options.supportBlock = cleanBlockName(settings.supportBlock);
   }
-  if (cleanBlockName(settings.shadeBlock) !== "") {
+  if (!crubTech && cleanBlockName(settings.shadeBlock) !== "") {
     options.shadeBlock = cleanBlockName(settings.shadeBlock);
   }
   if (isSuppressMethod(mode)) {
-    options.direction = settings.suppressDirection;
-    options.centerOut = !settings.suppressOneDirection;
+    options.direction = crubTech ? CRUBTECH.suppressDirection : settings.suppressDirection;
+    options.centerOut = crubTech ? false : !settings.suppressOneDirection;
   }
   if (isStepsMethod(mode)) {
     options.reuseBlocks = settings.keepReusableBlocks;
     options.keepExtras = !settings.blockRecycling;
+  }
+  if (mode === "suppress_2layer") {
+    if (crubTech) {
+      options.crubTech = true;
+      if (cleanBlockName(settings.crubTechPushableBlock) !== "") {
+        options.crubTechPushableBlock = cleanBlockName(settings.crubTechPushableBlock);
+      }
+    } else {
+      const spacing = twoLayerSpacing(support, settings.layerGap, settings.latePairsGap, false);
+      options.layerGap = spacing.layerGap;
+      options.latePairsGap = spacing.latePairsGap;
+    }
   }
   return options;
 }

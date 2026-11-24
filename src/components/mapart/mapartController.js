@@ -25,9 +25,12 @@ import IMG_Upload from "../../images/upload.png";
 
 import "./mapartController.css";
 
-// The only things remembered between visits are the "show me more options" toggles: which detail
-// panels are revealed, never which option is picked. Stored in localStorage as one small JSON object.
+// The only things remembered between visits are the "show me more options" toggles (which detail panels are
+// revealed, never which option is picked) and the user's own saved palette if one was picked last.
+// Both live in localStorage.
 const UI_TOGGLES_STORAGE_KEY = "mapartcraft_uiToggles";
+const SELECTED_PRESET_STORAGE_KEY = "mapartcraft_selectedPreset";
+const CRUBTECH_PRESET_LOCALE_KEY = "BLOCK-SELECTION/PRESETS/CRUBTECH";
 const UI_TOGGLE_KEYS = [
   "optionValue_moreDitheringOptions",
   "optionValue_moreColourspaceOptions",
@@ -54,9 +57,13 @@ class MapartController extends Component {
     // Schematic options (see pngToNbt.js); values are PNG-to-NBT's own option values
     optionValue_schematic_shadingMethod: SCHEMATIC_DEFAULTS.shadingMethod,
     optionValue_schematic_lateShading: SCHEMATIC_DEFAULTS.lateShading,
+    optionValue_schematic_layerGap: SCHEMATIC_DEFAULTS.layerGap,
+    optionValue_schematic_latePairsGap: SCHEMATIC_DEFAULTS.latePairsGap,
+    optionValue_schematic_crubTech: SCHEMATIC_DEFAULTS.crubTech,
     optionValue_schematic_support: SCHEMATIC_DEFAULTS.support,
     optionValue_supportBlock: SCHEMATIC_DEFAULTS.supportBlock,
     optionValue_schematic_shadeBlock: SCHEMATIC_DEFAULTS.shadeBlock,
+    optionValue_schematic_crubTechPushableBlock: SCHEMATIC_DEFAULTS.crubTechPushableBlock,
     optionValue_schematic_suppressDirection: SCHEMATIC_DEFAULTS.suppressDirection,
     optionValue_schematic_suppressOneDirection: SCHEMATIC_DEFAULTS.suppressOneDirection,
     optionValue_schematic_keepReusableBlocks: SCHEMATIC_DEFAULTS.keepReusableBlocks,
@@ -91,6 +98,7 @@ class MapartController extends Component {
     uploadedImage_baseFilename: null,
     presets: [],
     selectedPresetName: "", // set in the constructor; "" means the current selection matches no saved preset
+    preCrubTechPresetName: null, // the built-in preset ticking CrubTech switched away from, put back when it is unticked
     currentMaterialsData: {
       pixelsData: null,
       maps: [[]], // entries are dictionaries with keys "materials", "supportBlockCount"
@@ -102,22 +110,16 @@ class MapartController extends Component {
 
   constructor(props) {
     super(props);
-    // update default presets to latest version; done via checking for localeString
+    // The built-in presets always come from defaultPresets.json, so new ones reach everyone; the cookie keeps
+    // only the user's own. Older cookies also held copies of the built-ins (those have a localeKey), and a saved
+    // preset can't share a built-in's name, so both are dropped here.
     CookieManager.init();
-    let cookiesPresets_loaded = JSON.parse(CookieManager.touchCookie("mapartcraft_presets", JSON.stringify(DefaultPresets)));
-    let cookiesPresets_updated = [];
-    for (const cookiesPreset_loaded of cookiesPresets_loaded) {
-      let cookiesPreset_updated = undefined;
-      if ("localeKey" in cookiesPreset_loaded) {
-        cookiesPreset_updated = DefaultPresets.find((defaultPreset) => defaultPreset.localeKey === cookiesPreset_loaded.localeKey);
-      }
-      if (cookiesPreset_updated === undefined) {
-        cookiesPreset_updated = cookiesPreset_loaded;
-      }
-      cookiesPresets_updated.push(cookiesPreset_updated);
-    }
-    CookieManager.setCookie("mapartcraft_presets", JSON.stringify(cookiesPresets_updated));
-    this.state.presets = cookiesPresets_updated;
+    const cookiesPresets_loaded = JSON.parse(CookieManager.touchCookie("mapartcraft_presets", JSON.stringify([])));
+    const userPresets = cookiesPresets_loaded.filter(
+      (preset) => !("localeKey" in preset) && !DefaultPresets.some((defaultPreset) => defaultPreset.name === preset.name)
+    );
+    this.state.presets = [...DefaultPresets, ...userPresets];
+    this.savePresetsCookie(this.state.presets);
 
     let cookie_customBlocks = JSON.parse(CookieManager.touchCookie("mapartcraft_customBlocks", JSON.stringify([])));
     this.state.coloursJSON = this.getMergedColoursJSON(cookie_customBlocks);
@@ -135,8 +137,8 @@ class MapartController extends Component {
 
     Object.assign(this.state, this.loadUiToggles());
 
-    // Start with every block selected rather than an empty selection.
-    const startingPreset = this.getEverythingPreset();
+    // Start with the user's own palette from last time if they picked one, otherwise with every block.
+    const startingPreset = this.loadRememberedPreset(this.state.presets) || this.getEverythingPreset();
     this.state.selectedBlocks = this.selectedBlocksFromPreset(startingPreset.blocks, this.state.coloursJSON, this.state.optionValue_version);
     this.state.selectedPresetName = startingPreset.name;
 
@@ -152,6 +154,51 @@ class MapartController extends Component {
 
   getEverythingPreset() {
     return DefaultPresets.find((defaultPreset) => defaultPreset.localeKey === "BLOCK-SELECTION/PRESETS/EVERYTHING");
+  }
+
+  isUserPreset(preset) {
+    return preset !== undefined && !("localeKey" in preset);
+  }
+
+  savePresetsCookie(presets) {
+    CookieManager.setCookie("mapartcraft_presets", JSON.stringify(presets.filter((preset) => this.isUserPreset(preset))));
+  }
+
+  // The user's own preset picked on the last visit, if it still exists.
+  loadRememberedPreset(presets) {
+    try {
+      const name = window.localStorage.getItem(SELECTED_PRESET_STORAGE_KEY);
+      if (name === null) {
+        return undefined;
+      }
+      const preset = presets.find((candidate) => candidate.name === name && this.isUserPreset(candidate));
+      if (preset === undefined) {
+        window.localStorage.removeItem(SELECTED_PRESET_STORAGE_KEY);
+      }
+      return preset;
+    } catch (e) {
+      return undefined; // storage disabled, private mode: start from the default
+    }
+  }
+
+  // Remember a picked preset for the next visit if it is one of the user's own; picking a built-in forgets it.
+  rememberPreset(preset) {
+    try {
+      if (this.isUserPreset(preset)) {
+        window.localStorage.setItem(SELECTED_PRESET_STORAGE_KEY, preset.name);
+      } else {
+        window.localStorage.removeItem(SELECTED_PRESET_STORAGE_KEY);
+      }
+    } catch (e) {
+      // nothing to do: the preset still applies for this visit
+    }
+  }
+
+  // Whether the selected blocks are exactly what the preset gives for the current version.
+  selectionMatchesPreset(preset) {
+    const { coloursJSON, optionValue_version, selectedBlocks } = this.state;
+    const presetBlocks = this.selectedBlocksFromPreset(preset.blocks, coloursJSON, optionValue_version);
+    return Object.keys(presetBlocks).every((colourSetId) => presetBlocks[colourSetId] === selectedBlocks[colourSetId]);
   }
 
   // Resolves a preset's [colourSetId, presetIndex] pairs into the selectedBlocks map for the given
@@ -510,6 +557,38 @@ class MapartController extends Component {
     this.setState({ optionValue_schematic_lateShading: e.target.value });
   };
 
+  onOptionChange_schematic_layerGap = (value) => {
+    this.setState({ optionValue_schematic_layerGap: value });
+  };
+
+  onOptionChange_schematic_latePairsGap = (value) => {
+    this.setState({ optionValue_schematic_latePairsGap: value });
+  };
+
+  // Ticking CrubTech switches the blocks to the CrubTech preset, as PNG-to-NBT's site does, unless they are a palette
+  // of the user's own: a saved preset, a shared link, or a built-in preset with blocks changed by hand. Unticking
+  // it puts back the built-in preset it replaced, as long as the CrubTech blocks haven't been changed since.
+  onOptionChange_schematic_crubTech = () => {
+    const { coloursJSON, optionValue_version, optionValue_schematic_crubTech, selectedPresetName, preCrubTechPresetName } = this.state;
+    const crubTechPreset = DefaultPresets.find((preset) => preset.localeKey === CRUBTECH_PRESET_LOCALE_KEY);
+    const update = { optionValue_schematic_crubTech: !optionValue_schematic_crubTech, preCrubTechPresetName: null };
+    if (!optionValue_schematic_crubTech) {
+      const current = DefaultPresets.find((preset) => preset.name === selectedPresetName);
+      if (current !== undefined && current !== crubTechPreset && this.selectionMatchesPreset(current)) {
+        update.preCrubTechPresetName = current.name;
+        update.selectedPresetName = crubTechPreset.name;
+        update.selectedBlocks = this.selectedBlocksFromPreset(crubTechPreset.blocks, coloursJSON, optionValue_version);
+      }
+    } else {
+      const previous = DefaultPresets.find((preset) => preset.name === preCrubTechPresetName);
+      if (previous !== undefined && selectedPresetName === crubTechPreset.name && this.selectionMatchesPreset(crubTechPreset)) {
+        update.selectedPresetName = previous.name;
+        update.selectedBlocks = this.selectedBlocksFromPreset(previous.blocks, coloursJSON, optionValue_version);
+      }
+    }
+    this.setState(update);
+  };
+
   onOptionChange_schematic_support = (e) => {
     this.setState({ optionValue_schematic_support: e.target.value });
   };
@@ -520,6 +599,10 @@ class MapartController extends Component {
 
   setOption_schematic_shadeBlock = (text) => {
     this.setState({ optionValue_schematic_shadeBlock: text });
+  };
+
+  setOption_schematic_crubTechPushableBlock = (text) => {
+    this.setState({ optionValue_schematic_crubTechPushableBlock: text });
   };
 
   onOptionChange_schematic_suppressDirection = (e) => {
@@ -779,6 +862,7 @@ class MapartController extends Component {
     if (selectedPreset !== undefined) {
       this.handleChangeColourSetBlocks(selectedPreset.blocks);
     }
+    this.rememberPreset(selectedPreset);
   };
 
   canDeletePreset = () => {
@@ -798,7 +882,8 @@ class MapartController extends Component {
       selectedPresetName: fallbackPreset.name,
     });
     this.handleChangeColourSetBlocks(fallbackPreset.blocks);
-    CookieManager.setCookie("mapartcraft_presets", JSON.stringify(presets_new));
+    this.savePresetsCookie(presets_new);
+    this.rememberPreset(fallbackPreset);
   };
 
   handleSavePreset = () => {
@@ -807,6 +892,10 @@ class MapartController extends Component {
 
     let presetToSave_name = prompt(getLocaleString("BLOCK-SELECTION/PRESETS/SAVE-PROMPT-ENTER-NAME"), "");
     if (presetToSave_name === null) {
+      return;
+    }
+    if (DefaultPresets.some((defaultPreset) => defaultPreset.name === presetToSave_name)) {
+      alert(getLocaleString("BLOCK-SELECTION/PRESETS/DELETE-ERROR-DEFAULT"));
       return;
     }
 
@@ -822,7 +911,8 @@ class MapartController extends Component {
       presets: presets_new,
       selectedPresetName: presetToSave_name,
     });
-    CookieManager.setCookie("mapartcraft_presets", JSON.stringify(presets_new));
+    this.savePresetsCookie(presets_new);
+    this.rememberPreset(newPreset);
   };
 
   selectedBlocksToURL = () => {
@@ -1056,9 +1146,13 @@ class MapartController extends Component {
       optionValue_staircasing,
       optionValue_schematic_shadingMethod,
       optionValue_schematic_lateShading,
+      optionValue_schematic_layerGap,
+      optionValue_schematic_latePairsGap,
+      optionValue_schematic_crubTech,
       optionValue_schematic_support,
       optionValue_supportBlock,
       optionValue_schematic_shadeBlock,
+      optionValue_schematic_crubTechPushableBlock,
       optionValue_schematic_suppressDirection,
       optionValue_schematic_suppressOneDirection,
       optionValue_schematic_keepReusableBlocks,
@@ -1102,9 +1196,13 @@ class MapartController extends Component {
     const schematicProps = {
       optionValue_schematic_shadingMethod,
       optionValue_schematic_lateShading,
+      optionValue_schematic_layerGap,
+      optionValue_schematic_latePairsGap,
+      optionValue_schematic_crubTech,
       optionValue_schematic_support,
       optionValue_supportBlock,
       optionValue_schematic_shadeBlock,
+      optionValue_schematic_crubTechPushableBlock,
       optionValue_schematic_suppressDirection,
       optionValue_schematic_suppressOneDirection,
       optionValue_schematic_keepReusableBlocks,
@@ -1144,12 +1242,20 @@ class MapartController extends Component {
             onOptionChange_schematic_shadingMethod={this.onOptionChange_schematic_shadingMethod}
             optionValue_schematic_lateShading={optionValue_schematic_lateShading}
             onOptionChange_schematic_lateShading={this.onOptionChange_schematic_lateShading}
+            optionValue_schematic_layerGap={optionValue_schematic_layerGap}
+            onOptionChange_schematic_layerGap={this.onOptionChange_schematic_layerGap}
+            optionValue_schematic_latePairsGap={optionValue_schematic_latePairsGap}
+            onOptionChange_schematic_latePairsGap={this.onOptionChange_schematic_latePairsGap}
+            optionValue_schematic_crubTech={optionValue_schematic_crubTech}
+            onOptionChange_schematic_crubTech={this.onOptionChange_schematic_crubTech}
             optionValue_schematic_support={optionValue_schematic_support}
             onOptionChange_schematic_support={this.onOptionChange_schematic_support}
             optionValue_supportBlock={optionValue_supportBlock}
             setOption_SupportBlock={this.setOption_SupportBlock}
             optionValue_schematic_shadeBlock={optionValue_schematic_shadeBlock}
             setOption_schematic_shadeBlock={this.setOption_schematic_shadeBlock}
+            optionValue_schematic_crubTechPushableBlock={optionValue_schematic_crubTechPushableBlock}
+            setOption_schematic_crubTechPushableBlock={this.setOption_schematic_crubTechPushableBlock}
             optionValue_schematic_suppressDirection={optionValue_schematic_suppressDirection}
             onOptionChange_schematic_suppressDirection={this.onOptionChange_schematic_suppressDirection}
             optionValue_schematic_suppressOneDirection={optionValue_schematic_suppressOneDirection}

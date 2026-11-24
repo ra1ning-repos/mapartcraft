@@ -7,17 +7,21 @@ import BufferedNumberInput from "./bufferedNumberInput/bufferedNumberInput";
 import Tooltip from "../tooltip";
 
 import {
+  CRUBTECH,
   LATE_SHADING_MODES,
+  MAX_LAYER_GAP,
   PNG_TO_NBT_SITE_URL,
   SCHEMATIC_DEFAULTS,
   SHADING_METHOD_GROUPS,
   SUPPORT_MODES,
   SUPPRESSION_DIRECTIONS,
+  crubTechSupportMode,
   findShadingMethod,
   isStepsMethod,
   isSuppressMethod,
   legacyShadingMethod,
   legacySupportMode,
+  twoLayerSpacing,
   usesPngToNbt,
 } from "./pngToNbt";
 
@@ -65,12 +69,20 @@ class MapSettings extends Component {
       onOptionChange_schematic_shadingMethod,
       optionValue_schematic_lateShading,
       onOptionChange_schematic_lateShading,
+      optionValue_schematic_layerGap,
+      onOptionChange_schematic_layerGap,
+      optionValue_schematic_latePairsGap,
+      onOptionChange_schematic_latePairsGap,
+      optionValue_schematic_crubTech,
+      onOptionChange_schematic_crubTech,
       optionValue_schematic_support,
       onOptionChange_schematic_support,
       optionValue_supportBlock,
       setOption_SupportBlock,
       optionValue_schematic_shadeBlock,
       setOption_schematic_shadeBlock,
+      optionValue_schematic_crubTechPushableBlock,
+      setOption_schematic_crubTechPushableBlock,
       optionValue_schematic_suppressDirection,
       onOptionChange_schematic_suppressDirection,
       optionValue_schematic_suppressOneDirection,
@@ -390,17 +402,25 @@ class MapSettings extends Component {
     );
     const isNBT = optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId;
     // Schematic options: what PNG-to-NBT builds the .nbt with. Anything the current settings cannot use is
-    // greyed out rather than hidden. Versions PNG-to-NBT does not cover keep the built-in generator, which
-    // only knows Classic / Valley, the support modes it had as "Add blocks under", and one support block
-    // that is also its noobline.
+    // greyed out rather than hidden, showing the value that will be used. Versions PNG-to-NBT does not cover
+    // keep the built-in generator, which only knows Classic / Valley, the support modes it had as "Add blocks
+    // under", and one support block that is also its noobline. CrubTech fixes several 2-Layer settings.
     let settingGroup_schematic = null;
     if (isNBT) {
       const pngToNbt = usesPngToNbt(optionValue_version);
       const shadingMethod = pngToNbt ? optionValue_schematic_shadingMethod : legacyShadingMethod(optionValue_schematic_shadingMethod);
-      const supportMode = pngToNbt ? optionValue_schematic_support : legacySupportMode(optionValue_schematic_support);
       const suppressing = pngToNbt && staircasingOn && isSuppressMethod(shadingMethod);
       const stepping = suppressing && isStepsMethod(shadingMethod);
       const twoLayer = suppressing && shadingMethod === "suppress_2layer";
+      const crubTech = twoLayer && optionValue_schematic_crubTech;
+      const supportMode = !pngToNbt
+        ? legacySupportMode(optionValue_schematic_support)
+        : crubTech
+        ? crubTechSupportMode(optionValue_schematic_support)
+        : optionValue_schematic_support;
+      const lateShading = crubTech ? CRUBTECH.lateShading : optionValue_schematic_lateShading;
+      const latePairs = twoLayer && lateShading === "suppress_2layer_late_pairs";
+      const spacing = twoLayerSpacing(supportMode, optionValue_schematic_layerGap, optionValue_schematic_latePairsGap, crubTech);
       const supportModeEntry = SUPPORT_MODES.find((mode) => mode.value === supportMode);
       const schematicRow = (disabled, label, tooltipText, control) => (
         <tr className={disabled ? "settingDisabled" : null}>
@@ -431,11 +451,17 @@ class MapSettings extends Component {
           ))}
         </select>
       );
-      const setting_schematic_lateShading = schematicRow(
+      const setting_schematic_crubTech = schematicRow(
         !twoLayer,
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/CRUBTECH"),
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/CRUBTECH-TT"),
+        <input type="checkbox" checked={optionValue_schematic_crubTech} onChange={onOptionChange_schematic_crubTech} disabled={!twoLayer} />
+      );
+      const setting_schematic_lateShading = schematicRow(
+        !twoLayer || crubTech,
         getLocaleString("MAP-SETTINGS/SCHEMATIC/LATE-SHADING/TITLE"),
         getLocaleString("MAP-SETTINGS/SCHEMATIC/LATE-SHADING/TITLE-TT"),
-        <select value={optionValue_schematic_lateShading} onChange={onOptionChange_schematic_lateShading} disabled={!twoLayer}>
+        <select value={lateShading} onChange={onOptionChange_schematic_lateShading} disabled={!twoLayer || crubTech}>
           {LATE_SHADING_MODES.map((mode) => (
             <option key={mode.value} value={mode.value}>
               {getLocaleString(mode.localeKey)}
@@ -443,20 +469,55 @@ class MapSettings extends Component {
           ))}
         </select>
       );
+      const setting_schematic_layerGap = schematicRow(
+        !twoLayer || crubTech,
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/LAYER-GAP"),
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/LAYER-GAP-TT"),
+        <BufferedNumberInput
+          min={spacing.minLayerGap}
+          max={MAX_LAYER_GAP}
+          step="1"
+          value={spacing.layerGap}
+          validators={[(t) => !isNaN(t), (t) => t >= spacing.minLayerGap, (t) => t <= MAX_LAYER_GAP]}
+          onValidInput={onOptionChange_schematic_layerGap}
+          disabled={!twoLayer || crubTech}
+          style={{ width: "3em" }}
+        />
+      );
+      const setting_schematic_latePairsGap = schematicRow(
+        !latePairs || crubTech,
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/LATE-PAIRS-GAP"),
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/LATE-PAIRS-GAP-TT"),
+        <BufferedNumberInput
+          min="1"
+          max={spacing.maxLatePairsGap}
+          step="1"
+          value={spacing.latePairsGap}
+          validators={[(t) => !isNaN(t), (t) => t >= 1, (t) => t <= spacing.maxLatePairsGap]}
+          onValidInput={onOptionChange_schematic_latePairsGap}
+          disabled={!latePairs || crubTech}
+          style={{ width: "3em" }}
+        />
+      );
       const setting_schematic_support = schematicRow(
         false,
         getLocaleString("MAP-SETTINGS/SCHEMATIC/SUPPORT/TITLE"),
         `${getLocaleString("MAP-SETTINGS/SCHEMATIC/SUPPORT/TITLE-TT")} ${getLocaleString(`${supportModeEntry.localeKey}-TT`)}`,
         <select value={supportMode} onChange={onOptionChange_schematic_support}>
           {SUPPORT_MODES.map((mode) => (
-            <option key={mode.value} value={mode.value} disabled={!pngToNbt && mode.legacy === null}>
+            <option
+              key={mode.value}
+              value={mode.value}
+              disabled={(!pngToNbt && mode.legacy === null) || (crubTech && mode.value !== crubTechSupportMode(mode.value))}
+            >
               {getLocaleString(mode.localeKey)}
             </option>
           ))}
         </select>
       );
-      // the built-in generator also uses the support block for its noobline, so it always needs one
-      const supportBlockDisabled = pngToNbt && supportMode === "none";
+      // the built-in generator also uses the support block for its noobline, so it always needs one;
+      // CrubTech builds its supports from its breakable / pushable blocks instead
+      const supportBlockDisabled = pngToNbt && (supportMode === "none" || crubTech);
       const setting_schematic_supportBlock = schematicRow(
         supportBlockDisabled,
         getLocaleString("MAP-SETTINGS/SCHEMATIC/SUPPORT-BLOCK"),
@@ -472,7 +533,7 @@ class MapSettings extends Component {
       );
       // the same PNG-to-NBT option: the noobline's blocks, plus the temporary shading blocks of suppress builds
       const setting_schematic_shadeBlock = schematicRow(
-        !pngToNbt,
+        !pngToNbt || crubTech,
         getLocaleString(suppressing ? "MAP-SETTINGS/SCHEMATIC/SHADE-BLOCK" : "MAP-SETTINGS/SCHEMATIC/NOOBLINE-BLOCK"),
         getLocaleString(suppressing ? "MAP-SETTINGS/SCHEMATIC/SHADE-BLOCK-TT" : "MAP-SETTINGS/SCHEMATIC/NOOBLINE-BLOCK-TT"),
         <AutoCompleteInputBlockToAdd
@@ -481,14 +542,31 @@ class MapSettings extends Component {
           setValue={setOption_schematic_shadeBlock}
           optionValue_version={optionValue_version}
           placeholder={SCHEMATIC_DEFAULTS.shadeBlock}
-          disabled={!pngToNbt}
+          disabled={!pngToNbt || crubTech}
+        />
+      );
+      const setting_schematic_crubTechPushableBlock = schematicRow(
+        !crubTech,
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/PUSHABLE-BLOCK"),
+        getLocaleString("MAP-SETTINGS/SCHEMATIC/PUSHABLE-BLOCK-TT"),
+        <AutoCompleteInputBlockToAdd
+          coloursJSON={coloursJSON}
+          value={optionValue_schematic_crubTechPushableBlock}
+          setValue={setOption_schematic_crubTechPushableBlock}
+          optionValue_version={optionValue_version}
+          placeholder={SCHEMATIC_DEFAULTS.crubTechPushableBlock}
+          disabled={!crubTech}
         />
       );
       const setting_schematic_suppressDirection = schematicRow(
-        !suppressing,
+        !suppressing || crubTech,
         getLocaleString("MAP-SETTINGS/SCHEMATIC/SUPPRESSION-DIRECTION/TITLE"),
         getLocaleString("MAP-SETTINGS/SCHEMATIC/SUPPRESSION-DIRECTION/TITLE-TT"),
-        <select value={optionValue_schematic_suppressDirection} onChange={onOptionChange_schematic_suppressDirection} disabled={!suppressing}>
+        <select
+          value={crubTech ? CRUBTECH.suppressDirection : optionValue_schematic_suppressDirection}
+          onChange={onOptionChange_schematic_suppressDirection}
+          disabled={!suppressing || crubTech}
+        >
           {SUPPRESSION_DIRECTIONS.map((direction) => (
             <option key={direction.value} value={direction.value}>
               {getLocaleString(direction.localeKey)}
@@ -497,14 +575,14 @@ class MapSettings extends Component {
         </select>
       );
       const setting_schematic_suppressOneDirection = schematicRow(
-        !suppressing,
+        !suppressing || crubTech,
         getLocaleString("MAP-SETTINGS/SCHEMATIC/SUPPRESS-ONE-DIRECTION"),
         getLocaleString("MAP-SETTINGS/SCHEMATIC/SUPPRESS-ONE-DIRECTION-TT"),
         <input
           type="checkbox"
-          checked={optionValue_schematic_suppressOneDirection}
+          checked={crubTech || optionValue_schematic_suppressOneDirection}
           onChange={onOptionChange_schematic_suppressOneDirection}
-          disabled={!suppressing}
+          disabled={!suppressing || crubTech}
         />
       );
       const setting_schematic_keepReusableBlocks = schematicRow(
@@ -532,10 +610,14 @@ class MapSettings extends Component {
             <table>
               <tbody>
                 {setting_schematic_shadingMethod}
+                {setting_schematic_crubTech}
                 {setting_schematic_lateShading}
+                {setting_schematic_layerGap}
+                {setting_schematic_latePairsGap}
                 {setting_schematic_support}
                 {setting_schematic_supportBlock}
                 {setting_schematic_shadeBlock}
+                {setting_schematic_crubTechPushableBlock}
                 {setting_schematic_suppressDirection}
                 {setting_schematic_suppressOneDirection}
                 {setting_schematic_keepReusableBlocks}
